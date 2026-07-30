@@ -344,10 +344,13 @@
     document.getElementById("bonusesLead").textContent = OFFER.bonuses.lead;
     const grid = document.getElementById("bonusGrid");
     OFFER.bonuses.items.forEach((bonus) => {
+      const coverInner = bonus.image
+        ? '<img class="bonus-cover-img no-save" src="' + bonus.image + '" alt="Capa do bônus: ' + bonus.name + '" loading="lazy" decoding="async" draggable="false" />'
+        : '<span class="bonus-cover-icon" aria-hidden="true">' + (BONUS_ICONS[bonus.icon] || "") + "</span>";
       grid.appendChild(el("div", "bonus-card",
         '<div class="bonus-cover">' +
+          coverInner +
           '<span class="bonus-cover-number">Bônus ' + bonus.number + "</span>" +
-          '<span class="bonus-cover-icon" aria-hidden="true">' + (BONUS_ICONS[bonus.icon] || "") + "</span>" +
           '<span class="bonus-cover-accent"></span>' +
         "</div>" +
         '<h3 class="bonus-name">' + bonus.name + "</h3>" +

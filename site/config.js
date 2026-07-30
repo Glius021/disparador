@@ -144,12 +144,12 @@ const OFFER = {
     titleHtml: '<span class="hl">6 bônus exclusivos</span> para turbinar sua preparação',
     lead: "Materiais complementares para organizar sua revisão, reforçar conteúdos estratégicos e chegar mais preparado ao ENAMED.",
     items: [
-      { number: "01", name: "Mapas Visuais do SUS", description: "Princípios, diretrizes, níveis de atenção, políticas públicas e fluxos do SUS organizados de forma visual e objetiva.", icon: "sus" },
-      { number: "02", name: "Urgência e Emergência", description: "Protocolos, prioridades, condutas iniciais, sinais de gravidade e raciocínio rápido para os principais cenários de emergência.", icon: "urgencia" },
-      { number: "03", name: "Valores Laboratoriais Essenciais", description: "Valores de referência, alterações importantes e interpretação prática dos exames laboratoriais mais relevantes para a prova.", icon: "lab" },
-      { number: "04", name: "Cronograma de Revisão de 30 Dias", description: "Plano diário para organizar os estudos, distribuir os temas e revisar o conteúdo com constância até a prova.", icon: "cronograma" },
-      { number: "05", name: "Checklist Visual de Véspera", description: "Uma revisão final com pontos-chave, red flags, exames, condutas e temas que não podem ser esquecidos antes do ENAMED.", icon: "checklist" },
-      { number: "06", name: "Flashcards Clínicos", description: "Perguntas e respostas rápidas para testar conhecimentos, reforçar a memória ativa e identificar assuntos que precisam ser revisados.", icon: "flashcards" }
+      { number: "01", name: "Mapas Visuais do SUS", description: "Princípios, diretrizes, níveis de atenção, políticas públicas e fluxos do SUS organizados de forma visual e objetiva.", icon: "sus", image: "assets/img/bonus/bonus_01_sus.png" },
+      { number: "02", name: "Urgência e Emergência", description: "Protocolos, prioridades, condutas iniciais, sinais de gravidade e raciocínio rápido para os principais cenários de emergência.", icon: "urgencia", image: "assets/img/bonus/bonus_02_urgencia.png" },
+      { number: "03", name: "Valores Laboratoriais Essenciais", description: "Valores de referência, alterações importantes e interpretação prática dos exames laboratoriais mais relevantes para a prova.", icon: "lab", image: "assets/img/bonus/bonus_03_lab.png" },
+      { number: "04", name: "Cronograma de Revisão de 30 Dias", description: "Plano diário para organizar os estudos, distribuir os temas e revisar o conteúdo com constância até a prova.", icon: "cronograma", image: "assets/img/bonus/bonus_04_cronograma.png" },
+      { number: "05", name: "Checklist Visual de Véspera", description: "Uma revisão final com pontos-chave, red flags, exames, condutas e temas que não podem ser esquecidos antes do ENAMED.", icon: "checklist", image: "assets/img/bonus/bonus_05_checklist.png" },
+      { number: "06", name: "Flashcards Clínicos", description: "Perguntas e respostas rápidas para testar conhecimentos, reforçar a memória ativa e identificar assuntos que precisam ser revisados.", icon: "flashcards", image: "assets/img/bonus/bonus_06_flashcards.png" }
     ]
   },
 

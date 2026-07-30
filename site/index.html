@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ENAMED MAP — 125 Mapas de Decisão Clínica para o ENAMED</title>
+  <meta name="description" content="125 mapas visuais de decisão clínica para revisar casos clássicos do ENAMED com mais rapidez e segurança." />
+  <meta name="robots" content="index, follow" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="styles.css?v=23" />
+</head>
+<body>
+
+  <div class="topbar" id="topbar-root" role="note">
+    <p><span id="topbarIcon" aria-hidden="true"></span> <span id="topbarText"></span></p>
+  </div>
+
+  <main id="topo">
+
+    <!-- 01. HERO PREMIUM — coluna única centralizada: headline, subheadline, mockup, botão -->
+    <section class="hero" id="hero-root">
+      <div class="container hero-grid">
+        <span class="eyebrow" id="heroEyebrow"></span>
+        <h1 class="hero-headline" id="heroHeadline"></h1>
+        <p class="hero-sub" id="heroSub"></p>
+
+        <div class="update-badge">
+          <span class="update-badge-icon" aria-hidden="true">&#10003;</span>
+          <span class="update-badge-text">
+            <strong id="heroUpdateLabel"></strong>
+            <span id="heroUpdateDesc"></span>
+          </span>
+        </div>
+
+        <!-- Mockup principal flutuante — arte real -->
+        <div class="hero-mockup">
+          <img class="hero-mockup-img no-save" src="assets/img/mockup_principal.png" alt="Mockup do ENAMED MAP: capa do material, tablet, celular e mapas clínicos de várias especialidades, +125 mapas" draggable="false" loading="eager" fetchpriority="high" />
+        </div>
+
+        <div class="hero-actions">
+          <button type="button" class="btn btn-primary" id="heroCta" data-cta></button>
+          <span class="hero-micro" id="heroMicro"></span>
+        </div>
+
+        <ul class="hero-checklist" id="heroChecklist"></ul>
+
+        <p class="hero-social-proof">
+          <span class="hero-stars" aria-hidden="true">★★★★★</span> <span id="heroSocialProofText"></span>
+        </p>
+      </div>
+    </section>
+
+    <!-- 02. FAIXA DE BENEFÍCIOS — cartão premium azul-marinho, largura expandida -->
+    <section class="trust-bar-section" id="trustbar-root">
+      <div class="trust-bar-card">
+        <div class="trust-bar-list" id="trustBarList"></div>
+      </div>
+    </section>
+
+    <!-- 03. CARROSSEL 1 — fileira única, limpa (arraste, autoplay, sem setas) -->
+    <section class="section" id="amostras-root">
+      <div class="container">
+        <div class="section-head section-head--center">
+          <h2 class="section-title" id="amostrasTitle"></h2>
+          <p class="section-subtitle" id="amostrasLead"></p>
+        </div>
+      </div>
+      <div class="carousel carousel--clean" id="amostrasCarousel">
+        <div class="carousel-viewport" id="amostrasViewport">
+          <div class="carousel-track" id="amostrasTrack"></div>
+        </div>
+      </div>
+      <div class="carousel-dots" id="amostrasDots"></div>
+      <p class="marquee-note">Toque em qualquer amostra para ampliar.</p>
+    </section>
+
+    <!-- 04. ÁREAS ORGANIZADAS — cards compactos -->
+    <section class="section section--alt" id="specialties-root">
+      <div class="container">
+        <div class="section-head section-head--center">
+          <span class="eyebrow" id="specialtiesEyebrow"></span>
+          <h2 class="section-title" id="specialtiesTitle"></h2>
+          <p class="section-subtitle" id="specialtiesLead"></p>
+        </div>
+        <div class="specialty-grid" id="specialtyGrid"></div>
+      </div>
+    </section>
+
+    <!-- 05. CARROSSEL 2 — duas fileiras independentes -->
+    <section class="section" id="gallery2-root">
+      <div class="container">
+        <div class="section-head section-head--center">
+          <span class="eyebrow" id="gallery2Eyebrow"></span>
+          <h2 class="section-title" id="gallery2Title"></h2>
+        </div>
+      </div>
+      <div class="container container--wide">
+        <div class="carousel-row">
+          <div class="carousel carousel--row carousel--clean">
+            <div class="carousel-viewport" id="rowAViewport"><div class="carousel-track" id="rowATrack"></div></div>
+          </div>
+        </div>
+        <div class="carousel-row">
+          <div class="carousel carousel--row carousel--clean">
+            <div class="carousel-viewport" id="rowBViewport"><div class="carousel-track" id="rowBTrack"></div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 06. SISTEMA DE REVISÃO — banner real com a metodologia completa -->
+    <section class="section method-banner-section" id="method-root">
+      <div class="container">
+        <img class="method-banner-img no-save" src="assets/img/sistema-visual-enamed-map.png" alt="Sistema Visual de Revisão ENAMED MAP: Aprenda, Revise, Teste, Corrija e Memorize — metodologia completa com mapas clínicos, cronograma de revisão, questões, checklist e revisão de véspera." loading="lazy" draggable="false" />
+      </div>
+    </section>
+
+    <!-- 06.1 PARA QUEM É O MATERIAL — dois perfis de público -->
+    <section class="section section--alt" id="audiencefit-root">
+      <div class="container">
+        <div class="section-head section-head--center">
+          <span class="eyebrow" id="audienceFitEyebrow"></span>
+          <h2 class="section-title" id="audienceFitTitle"></h2>
+          <p class="section-subtitle" id="audienceFitSubtitle"></p>
+        </div>
+        <div class="audience-fit-grid" id="audienceFitGrid"></div>
+      </div>
+    </section>
+
+    <!-- 06.2 PASSO A PASSO DO ACESSO — jornada do aluno após a compra -->
+    <section class="section" id="accesssteps-root">
+      <div class="container">
+        <div class="section-head section-head--center">
+          <span class="eyebrow" id="accessStepsEyebrow"></span>
+          <h2 class="section-title" id="accessStepsTitle"></h2>
+          <p class="section-subtitle" id="accessStepsSubtitle"></p>
+        </div>
+        <div class="access-steps" id="accessStepsList"></div>
+      </div>
+    </section>
+
+    <!-- 07. SEIS BÔNUS TANGÍVEIS -->
+    <section class="section" id="bonuses-root">
+      <div class="container">
+        <div class="section-head section-head--center">
+          <span class="eyebrow" id="bonusesEyebrow"></span>
+          <h2 class="section-title" id="bonusesTitle"></h2>
+          <p class="section-lead" id="bonusesLead"></p>
+        </div>
+        <div class="bonus-grid" id="bonusGrid"></div>
+      </div>
+    </section>
+
+    <!-- 08. PROVA SOCIAL — carrossel limpo, passando para a esquerda -->
+    <section class="section section--alt" id="proof-root">
+      <div class="container">
+        <div class="section-head section-head--center">
+          <span class="eyebrow" id="proofEyebrow"></span>
+          <h2 class="section-title" id="proofTitle"></h2>
+        </div>
+      </div>
+      <div class="carousel carousel--clean" id="proofCarousel">
+        <div class="carousel-viewport" id="proofViewport">
+          <div class="carousel-track testimonial-grid" id="testimonialGrid"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 09. OFERTA E ACESSO — fundo claro, integrado -->
+    <section class="section" id="pricing-root">
+      <div class="container">
+        <div class="section-head section-head--center">
+          <span class="eyebrow" id="pricingEyebrow"></span>
+          <h2 class="section-title" id="pricingTitle"></h2>
+        </div>
+        <div class="offer-grid">
+          <div class="pricing-grid">
+            <div class="pricing-card pricing-card--basic">
+              <h3 id="basicName"></h3>
+              <div class="pricing-price" id="basicPrice"></div>
+              <p class="pricing-note" id="basicNote"></p>
+              <ul class="pricing-includes" id="basicIncludes"></ul>
+              <button type="button" class="btn btn-outline btn-block" data-cta id="basicCta"></button>
+            </div>
+            <div class="pricing-card pricing-card--premium">
+              <span class="pricing-ribbon" id="premiumRibbon"></span>
+              <h3 id="premiumName"></h3>
+              <div class="pricing-price" id="premiumPrice"></div>
+              <p class="pricing-note" id="premiumNote"></p>
+              <ul class="pricing-includes" id="premiumIncludes"></ul>
+              <button type="button" class="btn btn-primary btn-block" data-cta id="premiumCta"></button>
+            </div>
+          </div>
+          <div class="access-panel">
+            <h3 class="access-title" id="accessTitle"></h3>
+            <div class="access-devices" id="accessDevices"></div>
+            <div class="guarantee-card" id="guarantee-root">
+              <span class="guarantee-badge" aria-hidden="true">🛡️</span>
+              <div>
+                <span class="guarantee-label" id="guaranteeLabel"></span>
+                <h4 id="guaranteeTitle"></h4>
+                <p id="guaranteeTerms"></p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 10. FAQ — fundo claro -->
+    <section class="section section--alt" id="faq-root">
+      <div class="container">
+        <div class="section-head section-head--center">
+          <h2 class="section-title" id="faqTitle"></h2>
+        </div>
+        <div class="faq-list" id="faqList"></div>
+      </div>
+    </section>
+
+    <!-- CTA FINAL -->
+    <section class="section section--dark final-cta" id="final-cta-root">
+      <div class="container">
+        <h2 class="section-title" id="finalCtaTitle"></h2>
+        <button type="button" class="btn btn-primary" id="finalCta" data-cta></button>
+        <p class="legal-notice" id="legalNotice"></p>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <p>&copy; <span id="year"></span> ENAMED MAP. Todos os direitos reservados.</p>
+    </div>
+  </footer>
+
+  <!-- Lightbox -->
+  <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Amostra ampliada" hidden>
+    <div class="lightbox__backdrop" id="lightboxBackdrop"></div>
+    <div class="lightbox__content">
+      <button type="button" class="lightbox__close" id="lightboxClose" aria-label="Fechar">&times;</button>
+      <div class="lightbox__map" id="lightboxMap"></div>
+      <p class="lightbox__caption" id="lightboxCaption"></p>
+    </div>
+  </div>
+
+  <script src="config.js?v=23"></script>
+  <script src="script.js?v=23"></script>
+  <script>document.getElementById("year").textContent = new Date().getFullYear();</script>
+</body>
+</html>

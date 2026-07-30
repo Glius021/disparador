@@ -385,6 +385,7 @@ h1, h2, h3, h4 { font-family: var(--font-heading); color: var(--ink); line-heigh
   display: flex; flex-direction: column; justify-content: space-between; padding: var(--space-3);
   margin-bottom: var(--space-4); box-shadow: var(--shadow-md);
 }
+.bonus-cover:has(.bonus-cover-img) { aspect-ratio: 1/1; }
 .bonus-cover-number {
   align-self: flex-start; font-family: var(--font-heading); font-weight: 800; font-size: 0.66rem;
   letter-spacing: 0.04em; text-transform: uppercase; color: #fff; background: rgba(255,255,255,0.16);

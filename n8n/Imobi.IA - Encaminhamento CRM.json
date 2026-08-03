@@ -1,0 +1,895 @@
+{
+  "name": "Imobi.IA - Encaminhamento CRM",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "workflowInputs",
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "nome",
+              "type": "string"
+            },
+            {
+              "name": "telefone",
+              "type": "string"
+            },
+            {
+              "name": "tipo_imovel",
+              "type": "string"
+            },
+            {
+              "name": "regiao",
+              "type": "string"
+            },
+            {
+              "name": "faixa_valor",
+              "type": "string"
+            },
+            {
+              "name": "finalidade",
+              "type": "string"
+            },
+            {
+              "name": "urgencia",
+              "type": "string"
+            },
+            {
+              "name": "financiamento",
+              "type": "string"
+            },
+            {
+              "name": "moradores",
+              "type": "string"
+            },
+            {
+              "name": "garagem",
+              "type": "string"
+            },
+            {
+              "name": "suite",
+              "type": "string"
+            },
+            {
+              "name": "pets",
+              "type": "string"
+            },
+            {
+              "name": "area_lazer",
+              "type": "string"
+            },
+            {
+              "name": "metragem_minima",
+              "type": "string"
+            },
+            {
+              "name": "observacoes",
+              "type": "string"
+            },
+            {
+              "name": "resumo",
+              "type": "string"
+            },
+            {
+              "name": "session_id",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -1120,
+        320
+      ],
+      "id": "recebe-dados",
+      "name": "Recebe Dados"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c1",
+              "name": "chatwoot_url",
+              "value": "https://SEU-CHATWOOT.com.br",
+              "type": "string"
+            },
+            {
+              "id": "c2",
+              "name": "chatwoot_account_id",
+              "value": "1",
+              "type": "string"
+            },
+            {
+              "id": "c3",
+              "name": "chatwoot_inbox_id",
+              "value": "1",
+              "type": "string"
+            },
+            {
+              "id": "c4",
+              "name": "chatwoot_assignee_id",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "c5",
+              "name": "chatwoot_etiquetas",
+              "value": "lead-qualificado,isis",
+              "type": "string"
+            },
+            {
+              "id": "c6",
+              "name": "vendedor_whatsapp",
+              "value": "5521999999999",
+              "type": "string"
+            },
+            {
+              "id": "c7",
+              "name": "evolution_instance",
+              "value": "tim",
+              "type": "string"
+            },
+            {
+              "id": "c8",
+              "name": "pausa_isis_segundos",
+              "value": "86400",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -928,
+        320
+      ],
+      "id": "config-crm",
+      "name": "Config CRM"
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\n\nconst nz = (v) => {\n  const s = (v === undefined || v === null) ? '' : String(v).trim();\n  const low = s.toLowerCase();\n  if (s === '' || low === 'undefined' || low === 'null' || low === 'n/a') return 'Não informado';\n  return s;\n};\n\nconst raw = String(d.telefone || '');\nconst digits = raw.replace(/\\D/g, '');\n// a chave de bloqueio da Isis usa o remoteJid completo, entao normalizamos aqui\nconst remote_jid = raw.includes('@') ? raw : digits + '@s.whatsapp.net';\n\nconst nome = nz(d.nome);\n\nconst linhas = [\n  ['Nome', nome],\n  ['Telefone', digits],\n  ['Tipo de imóvel', nz(d.tipo_imovel)],\n  ['Região desejada', nz(d.regiao)],\n  ['Faixa de valor', nz(d.faixa_valor)],\n  ['Compra ou locação', nz(d.finalidade)],\n  ['Urgência', nz(d.urgencia)],\n  ['Financiamento', nz(d.financiamento)],\n  ['Nº de moradores', nz(d.moradores)],\n  ['Vaga de garagem', nz(d.garagem)],\n  ['Suíte', nz(d.suite)],\n  ['Aceita pets', nz(d.pets)],\n  ['Área de lazer', nz(d.area_lazer)],\n  ['Metragem mínima', nz(d.metragem_minima)],\n  ['Observações', nz(d.observacoes)],\n];\n\nconst resumo_texto = linhas.map(([k, v]) => k + ': ' + v).join('\\n');\n\n// as 12 perguntas de qualificacao ficam entre 'Tipo de imóvel' e 'Metragem mínima'\nconst preenchidos = linhas.slice(2, 14).filter(([, v]) => v !== 'Não informado').length;\n\nconst agora = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });\n\nconst mensagem_vendedor =\n  '🏠 *NOVO LEAD QUALIFICADO*\\n\\n' +\n  resumo_texto + '\\n\\n' +\n  '📊 Qualificação: ' + preenchidos + '/12 campos\\n' +\n  '🕒 ' + agora + '\\n' +\n  '💬 Falar com o lead: wa.me/' + digits;\n\nconst nota_crm =\n  '🤖 *Pré-atendimento Isis — lead qualificado*\\n\\n' +\n  resumo_texto + '\\n\\n' +\n  'Qualificação: ' + preenchidos + '/12 campos preenchidos.';\n\nreturn [{\n  json: {\n    ...d,\n    nome,\n    telefone_digits: digits,\n    telefone_e164: '+' + digits,\n    remote_jid,\n    resumo_texto,\n    resumo_agente: d.resumo || '',\n    campos_preenchidos: preenchidos,\n    mensagem_vendedor,\n    nota_crm,\n    data_hora: agora,\n  },\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -736,
+        320
+      ],
+      "id": "monta-resumo",
+      "name": "Monta Resumo"
+    },
+    {
+      "parameters": {
+        "tableId": "leads_qualificados",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "telefone",
+              "fieldValue": "={{ $json.telefone_digits }}"
+            },
+            {
+              "fieldId": "session_id",
+              "fieldValue": "={{ $json.session_id }}"
+            },
+            {
+              "fieldId": "nome",
+              "fieldValue": "={{ $json.nome }}"
+            },
+            {
+              "fieldId": "tipo_imovel",
+              "fieldValue": "={{ $json.tipo_imovel }}"
+            },
+            {
+              "fieldId": "regiao",
+              "fieldValue": "={{ $json.regiao }}"
+            },
+            {
+              "fieldId": "faixa_valor",
+              "fieldValue": "={{ $json.faixa_valor }}"
+            },
+            {
+              "fieldId": "finalidade",
+              "fieldValue": "={{ $json.finalidade }}"
+            },
+            {
+              "fieldId": "urgencia",
+              "fieldValue": "={{ $json.urgencia }}"
+            },
+            {
+              "fieldId": "financiamento",
+              "fieldValue": "={{ $json.financiamento }}"
+            },
+            {
+              "fieldId": "moradores",
+              "fieldValue": "={{ $json.moradores }}"
+            },
+            {
+              "fieldId": "garagem",
+              "fieldValue": "={{ $json.garagem }}"
+            },
+            {
+              "fieldId": "suite",
+              "fieldValue": "={{ $json.suite }}"
+            },
+            {
+              "fieldId": "pets",
+              "fieldValue": "={{ $json.pets }}"
+            },
+            {
+              "fieldId": "area_lazer",
+              "fieldValue": "={{ $json.area_lazer }}"
+            },
+            {
+              "fieldId": "metragem_minima",
+              "fieldValue": "={{ $json.metragem_minima }}"
+            },
+            {
+              "fieldId": "observacoes",
+              "fieldValue": "={{ $json.observacoes }}"
+            },
+            {
+              "fieldId": "resumo",
+              "fieldValue": "={{ $json.resumo_texto }}"
+            },
+            {
+              "fieldId": "campos_preenchidos",
+              "fieldValue": "={{ $json.campos_preenchidos }}"
+            },
+            {
+              "fieldId": "created_at",
+              "fieldValue": "={{ $now.toISO() }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -544,
+        320
+      ],
+      "id": "salva-lead",
+      "name": "Salva Lead Supabase",
+      "credentials": {
+        "supabaseApi": {
+          "id": "TBx9PMe7xBcXtl10",
+          "name": "IA prospec"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('Config CRM').first().json.chatwoot_url }}/api/v1/accounts/{{ $('Config CRM').first().json.chatwoot_account_id }}/contacts/search?q={{ $('Monta Resumo').first().json.telefone_digits }}",
+        "authentication": "genericCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -352,
+        320
+      ],
+      "id": "chatwoot-busca-contato",
+      "name": "Chatwoot Busca Contato",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CHATWOOT_HEADER_AUTH",
+          "name": "Chatwoot API"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "Contato Existe?",
+              "leftValue": "={{ ($json.payload || []).length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {
+          "ignoreCase": true
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -160,
+        320
+      ],
+      "id": "contato-existe",
+      "name": "Contato Existe?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config CRM').first().json.chatwoot_url }}/api/v1/accounts/{{ $('Config CRM').first().json.chatwoot_account_id }}/contacts",
+        "authentication": "genericCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "options": {},
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"inbox_id\": {{ Number($('Config CRM').first().json.chatwoot_inbox_id) }},\n  \"name\": {{ JSON.stringify($('Monta Resumo').first().json.nome) }},\n  \"phone_number\": {{ JSON.stringify($('Monta Resumo').first().json.telefone_e164) }},\n  \"identifier\": {{ JSON.stringify($('Monta Resumo').first().json.telefone_digits) }}\n}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        32,
+        432
+      ],
+      "id": "chatwoot-cria-contato",
+      "name": "Chatwoot Cria Contato",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CHATWOOT_HEADER_AUTH",
+          "name": "Chatwoot API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const j = $input.first().json;\nconst inboxId = String($('Config CRM').first().json.chatwoot_inbox_id);\nconst fallbackSource = $('Monta Resumo').first().json.telefone_digits;\n\n// a busca devolve payload como array; a criacao devolve payload.contact\nlet contact = null;\nif (Array.isArray(j.payload)) contact = j.payload[0] || null;\nelse if (j.payload && j.payload.contact) contact = j.payload.contact;\nelse if (j.payload && j.payload.id) contact = j.payload;\nelse if (j.id) contact = j;\n\nif (!contact || !contact.id) {\n  throw new Error('Chatwoot: nao foi possivel obter o contato. Resposta: ' + JSON.stringify(j).slice(0, 500));\n}\n\nconst inboxes = contact.contact_inboxes || [];\nconst match = inboxes.find((ci) => String((ci.inbox && ci.inbox.id) || ci.inbox_id) === inboxId) || inboxes[0];\n\nreturn [{\n  json: {\n    contact_id: contact.id,\n    source_id: (match && match.source_id) ? match.source_id : fallbackSource,\n  },\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        320
+      ],
+      "id": "normaliza-contato",
+      "name": "Normaliza Contato"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('Config CRM').first().json.chatwoot_url }}/api/v1/accounts/{{ $('Config CRM').first().json.chatwoot_account_id }}/contacts/{{ $json.contact_id }}/conversations",
+        "authentication": "genericCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        416,
+        320
+      ],
+      "id": "chatwoot-busca-conversa",
+      "name": "Chatwoot Busca Conversa",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CHATWOOT_HEADER_AUTH",
+          "name": "Chatwoot API"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "Conversa Existe?",
+              "leftValue": "={{ ($json.payload || []).length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {
+          "ignoreCase": true
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        608,
+        320
+      ],
+      "id": "conversa-existe",
+      "name": "Conversa Existe?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config CRM').first().json.chatwoot_url }}/api/v1/accounts/{{ $('Config CRM').first().json.chatwoot_account_id }}/conversations",
+        "authentication": "genericCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "options": {},
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"inbox_id\": {{ Number($('Config CRM').first().json.chatwoot_inbox_id) }},\n  \"contact_id\": {{ Number($('Normaliza Contato').first().json.contact_id) }},\n  \"source_id\": {{ JSON.stringify(String($('Normaliza Contato').first().json.source_id)) }},\n  \"status\": \"open\"\n}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        800,
+        432
+      ],
+      "id": "chatwoot-cria-conversa",
+      "name": "Chatwoot Cria Conversa",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CHATWOOT_HEADER_AUTH",
+          "name": "Chatwoot API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const j = $input.first().json;\n\n// a listagem devolve payload como array; a criacao devolve a conversa direto\nlet conv = null;\nif (Array.isArray(j.payload)) {\n  const list = j.payload;\n  conv = list.find((c) => c.status === 'open')\n      || list.find((c) => c.status === 'pending')\n      || list[0] || null;\n} else if (j.payload && j.payload.id) conv = j.payload;\nelse if (j.id) conv = j;\n\nif (!conv || !conv.id) {\n  throw new Error('Chatwoot: nao foi possivel obter a conversa. Resposta: ' + JSON.stringify(j).slice(0, 500));\n}\n\nreturn [{ json: { conversation_id: conv.id } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        992,
+        320
+      ],
+      "id": "normaliza-conversa",
+      "name": "Normaliza Conversa"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config CRM').first().json.chatwoot_url }}/api/v1/accounts/{{ $('Config CRM').first().json.chatwoot_account_id }}/conversations/{{ $json.conversation_id }}/messages",
+        "authentication": "genericCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "options": {},
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"content\": {{ JSON.stringify($('Monta Resumo').first().json.nota_crm) }}, \"message_type\": \"outgoing\", \"private\": true }"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1184,
+        320
+      ],
+      "id": "chatwoot-nota-do-lead",
+      "name": "Chatwoot Nota do Lead",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CHATWOOT_HEADER_AUTH",
+          "name": "Chatwoot API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config CRM').first().json.chatwoot_url }}/api/v1/accounts/{{ $('Config CRM').first().json.chatwoot_account_id }}/conversations/{{ $('Normaliza Conversa').first().json.conversation_id }}/labels",
+        "authentication": "genericCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "options": {},
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"labels\": {{ JSON.stringify($('Config CRM').first().json.chatwoot_etiquetas.split(',').map(s => s.trim()).filter(s => s)) }} }"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1376,
+        320
+      ],
+      "id": "chatwoot-etiqueta",
+      "name": "Chatwoot Etiqueta",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CHATWOOT_HEADER_AUTH",
+          "name": "Chatwoot API"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "tem-corretor",
+              "leftValue": "={{ $('Config CRM').first().json.chatwoot_assignee_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1568,
+        320
+      ],
+      "id": "tem-corretor",
+      "name": "Tem Corretor Definido?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config CRM').first().json.chatwoot_url }}/api/v1/accounts/{{ $('Config CRM').first().json.chatwoot_account_id }}/conversations/{{ $('Normaliza Conversa').first().json.conversation_id }}/assignments",
+        "authentication": "genericCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "options": {},
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"assignee_id\": {{ $('Config CRM').first().json.chatwoot_assignee_id }} }"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        208
+      ],
+      "id": "chatwoot-atribui-corretor",
+      "name": "Chatwoot Atribui Corretor",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CHATWOOT_HEADER_AUTH",
+          "name": "Chatwoot API"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "messages-api",
+        "instanceName": "={{ $('Config CRM').first().json.evolution_instance }}",
+        "remoteJid": "={{ $('Config CRM').first().json.vendedor_whatsapp }}",
+        "messageText": "={{ $('Monta Resumo').first().json.mensagem_vendedor }}",
+        "options_message": {
+          "delay": 800,
+          "linkPreview": false
+        }
+      },
+      "type": "n8n-nodes-evolution-api.evolutionApi",
+      "typeVersion": 1,
+      "position": [
+        1952,
+        320
+      ],
+      "id": "avisa-vendedor",
+      "name": "Avisa Vendedor WhatsApp",
+      "credentials": {
+        "evolutionApi": {
+          "id": "B2PbE6KeuyKr1eiD",
+          "name": "Evolution account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "set",
+        "key": "={{ $('Monta Resumo').first().json.remote_jid }}_block",
+        "value": "true",
+        "keyType": "string",
+        "expire": true,
+        "ttl": "={{ Number($('Config CRM').first().json.pausa_isis_segundos) }}"
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        2144,
+        320
+      ],
+      "id": "pausa-isis",
+      "name": "Pausa Isis",
+      "credentials": {
+        "redis": {
+          "id": "Dr2yUkSVjsLZcCVx",
+          "name": "Prospec"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "r1",
+              "name": "response",
+              "type": "string",
+              "value": "=Lead encaminhado com sucesso para o vendedor. Atendimento aberto no CRM (conversa {{ $('Normaliza Conversa').first().json.conversation_id }}). Nao chame esta ferramenta novamente. Agora envie ao lead apenas a mensagem curta de confirmacao do encaminhamento."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2336,
+        320
+      ],
+      "id": "retorno-isis",
+      "name": "Retorno para a Isis"
+    },
+    {
+      "parameters": {
+        "content": "## Configure aqui\n\nAbra o node **Config CRM** e preencha:\n\n- `chatwoot_url`, `chatwoot_account_id`, `chatwoot_inbox_id`\n- `chatwoot_assignee_id` (vazio = deixa na fila do time)\n- `vendedor_whatsapp` (com DDI, ex: 5521999999999)\n- `evolution_instance`\n\nCrie tambem a credencial **Header Auth** chamada `Chatwoot API` com nome `api_access_token` e o token do seu perfil no Chatwoot.",
+        "height": 320,
+        "width": 380,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -960,
+        -80
+      ],
+      "id": "sticky-config",
+      "name": "Sticky Config"
+    }
+  ],
+  "connections": {
+    "Recebe Dados": {
+      "main": [
+        [
+          {
+            "node": "Config CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config CRM": {
+      "main": [
+        [
+          {
+            "node": "Monta Resumo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Monta Resumo": {
+      "main": [
+        [
+          {
+            "node": "Salva Lead Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Salva Lead Supabase": {
+      "main": [
+        [
+          {
+            "node": "Chatwoot Busca Contato",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chatwoot Busca Contato": {
+      "main": [
+        [
+          {
+            "node": "Contato Existe?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contato Existe?": {
+      "main": [
+        [
+          {
+            "node": "Normaliza Contato",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Chatwoot Cria Contato",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chatwoot Cria Contato": {
+      "main": [
+        [
+          {
+            "node": "Normaliza Contato",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normaliza Contato": {
+      "main": [
+        [
+          {
+            "node": "Chatwoot Busca Conversa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chatwoot Busca Conversa": {
+      "main": [
+        [
+          {
+            "node": "Conversa Existe?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Conversa Existe?": {
+      "main": [
+        [
+          {
+            "node": "Normaliza Conversa",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Chatwoot Cria Conversa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chatwoot Cria Conversa": {
+      "main": [
+        [
+          {
+            "node": "Normaliza Conversa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normaliza Conversa": {
+      "main": [
+        [
+          {
+            "node": "Chatwoot Nota do Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chatwoot Nota do Lead": {
+      "main": [
+        [
+          {
+            "node": "Chatwoot Etiqueta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chatwoot Etiqueta": {
+      "main": [
+        [
+          {
+            "node": "Tem Corretor Definido?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tem Corretor Definido?": {
+      "main": [
+        [
+          {
+            "node": "Chatwoot Atribui Corretor",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Avisa Vendedor WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chatwoot Atribui Corretor": {
+      "main": [
+        [
+          {
+            "node": "Avisa Vendedor WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Avisa Vendedor WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Pausa Isis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pausa Isis": {
+      "main": [
+        [
+          {
+            "node": "Retorno para a Isis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}

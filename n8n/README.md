@@ -94,6 +94,22 @@ No workflow `Imobi.IA - Encaminhamento CRM`, abra o node **Config CRM**:
 | `evolution_instance` | Nome da instância na Evolution |
 | `pausa_isis_segundos` | Quanto tempo a Isis fica calada após o handoff (padrão 24h) |
 
+### Mapa de IDs — preencha conforme for importando
+
+Cada workflow recebe um ID proprio do n8n (aparece na URL: `/workflow/<ID>`).
+Tres campos precisam apontar para o ID **de outro** workflow. Anote aqui para nao trocar:
+
+| Workflow | ID dele | Quem aponta para ele |
+|---|---|---|
+| `Imobi.IA - Cerebro` | `zyUMRBwNp8S0mEXC` | `Imobi.IA` → node **Isis Gerente**<br>`Imobi.IA - Canal Site` → node **Chama Cérebro** |
+| `Imobi.IA - Encaminhamento CRM` | *(preencher)* | `Imobi.IA - Cerebro` → node **encaminhamento** |
+| `Imobi.IA - Canal Site` | `9zcCejCbLK1iQbVd` | ninguem (entrada pelo webhook) |
+| `Imobi.IA` | — | ninguem (entrada pelo webhook) |
+
+> **Atencao:** nunca aponte o node `encaminhamento` para o ID do proprio Cerebro.
+> O Cerebro passaria a chamar a si mesmo a cada qualificacao concluida, criando
+> recursao infinita — execucao travada e consumo continuo de credito da OpenAI.
+
 ### 5. Ligue a tool ao sub-workflow (dentro do Cérebro)
 
 Salve `Imobi.IA - Encaminhamento CRM`, copie o ID dele da URL (`/workflow/<ID>`), abra
@@ -119,8 +135,8 @@ widget do site**, não o do WhatsApp (crie um se ainda não tiver: Chatwoot → 
 Inboxes → **Website**, e copie o ID dele).
 
 Depois, no Chatwoot: Settings → Integrations → Webhooks → adicione a URL de produção do
-node `Webhook Chatwoot` (`.../webhook/chatwoot-site`), marcando os eventos
-`message_created` e `conversation_updated`.
+node `Webhook Chatwoot` (`.../webhook/chatwoot-site`), marcando **apenas** o evento
+`message_created`.
 
 Por fim, cole em seu site o script que o Chatwoot te dá na tela de configuração da inbox
 (Settings → Inboxes → sua inbox → **Configuração do widget**). É um `<script>` para colar
@@ -141,9 +157,11 @@ Quando a Isis chama a tool `encaminhamento`, o sub-workflow:
 
 A chave de pausa no Redis muda por canal: no WhatsApp é `<remoteJid>_block` (mesma que o
 fluxo já usava); no site é `site_<conversation_id>_block`, porque não existe remoteJid.
-O canal site também pausa a Isis automaticamente **assim que um corretor é atribuído à
-conversa no Chatwoot**, mesmo sem passar pelo encaminhamento — útil se o corretor assumir
-manualmente.
+
+A pausa **não** é disparada por atribuição de corretor no Chatwoot. Inboxes com auto
+atribuição já nascem com um responsável definido, então isso travaria a Isis antes dela
+responder a primeira mensagem. Se quiser que assumir a conversa manualmente também cale
+a Isis, desative a auto atribuição na inbox do widget e me avise que eu religo essa regra.
 
 O resumo chega assim:
 

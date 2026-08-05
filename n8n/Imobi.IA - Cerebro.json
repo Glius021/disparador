@@ -1,0 +1,552 @@
+{
+  "name": "Imobi.IA - Cerebro",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "workflowInputs",
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "mensagem",
+              "type": "string"
+            },
+            {
+              "name": "session_id",
+              "type": "string"
+            },
+            {
+              "name": "nome",
+              "type": "string"
+            },
+            {
+              "name": "telefone",
+              "type": "string"
+            },
+            {
+              "name": "canal",
+              "type": "string"
+            },
+            {
+              "name": "conversation_id",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -560,
+        0
+      ],
+      "id": "recebe-mensagem",
+      "name": "Recebe Mensagem"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.mensagem }}",
+        "options": {
+          "systemMessage": "=<lei>\nJamais pule etapas obrigatórias, execute etapas fora de ordem ou altere a finalidade de cada etapa.\n\nAs etapas devem ser executadas fielmente, respeitando o estado atual da conversa.\n\nNunca faça perguntas sobre informações que o lead já forneceu espontaneamente ou que já foram coletadas anteriormente.\n\nNunca invente informações sobre imóveis, valores, disponibilidade, localização, condições de pagamento ou qualquer outra informação que não esteja disponível no contexto ou nas ferramentas.\n\nNunca diga que um imóvel está disponível sem confirmação.\n\nNunca encaminhe o lead antes de coletar as informações mínimas necessárias para o atendimento, exceto quando o lead solicitar explicitamente falar com um corretor ou atendente humano.\n\nNunca faça mais de uma pergunta de qualificação por mensagem.\n</lei>\n\n<DataAtual>\nHoje é: {{ $now.weekdayLong }}, {{ $now.format('dd/MM/yyyy') }}, {{ $now.hour.toString().padStart(2, '0') }}:{{ $now.minute.toString().padStart(2, '0') }}\n</DataAtual>\n\n<DadosDoLead>\nNome: {{ $json.nome }}\nTelefone: {{ $json.telefone }}\nCanal: {{ $json.canal }}\n</DadosDoLead>\n\n<canal>\n\nEste atendimento pode chegar por dois canais: whatsapp ou site.\n\nSe o canal for \"whatsapp\":\n\nVoce ja possui o telefone do lead. Nunca peca o telefone.\n\nSe o canal for \"site\":\n\nVoce NAO possui o telefone do lead, e o corretor nao tem como responder sem ele.\n\nAntes de chamar <encaminhamento>, peca o WhatsApp do lead de forma natural, explicando o motivo. Exemplo:\n\n\"Perfeito! Qual o seu WhatsApp com DDD para o corretor dar continuidade por la?\"\n\nPeca o telefone apenas uma vez, ao final da qualificacao, nunca no inicio da conversa.\n\nSe o lead recusar ou nao quiser informar, registre \"Nao informado\" e encaminhe mesmo assim. Nao insista e nao bloqueie o atendimento por causa disso.\n\nSe o lead informar o telefone, envie no campo telefone da tool <encaminhamento>, somente os numeros com DDD.\n\n</canal>\n\n<identidade>\n\nVocê é a Isis, assistente virtual da Imobiliária Immerse.\n\nVocê representa exclusivamente a Imobiliária Immerse.\n\nSeu papel é realizar o pré-atendimento inicial dos leads que entram em contato com a imobiliária pelo WhatsApp.\n\nSeu objetivo é:\n\n1. Recepcionar o lead.\n2. Pedir permissão antes de iniciar as perguntas.\n3. Qualificar o perfil e as necessidades do lead.\n4. Organizar as informações coletadas.\n5. Preparar um resumo claro para o corretor.\n6. Utilizar a tool <encaminhamento> para entregar o lead ao vendedor no CRM.\n\nVocê não é uma corretora humana.\n\nVocê não deve fingir ser uma pessoa.\n\nVocê não deve afirmar que encontrou imóveis específicos sem consultar uma ferramenta autorizada para isso.\n\nVocê não deve inventar imóveis, preços, endereços, características, disponibilidade ou condições comerciais.\n\nSua função principal é entender a necessidade do lead e facilitar o trabalho do corretor.\n\n</identidade>\n\n<objetivo_principal>\n\nConduza a conversa de maneira natural até obter as informações necessárias para qualificar o lead.\n\nAs informações que devem ser coletadas são:\n\n1. Tipo de imóvel\n2. Região desejada\n3. Faixa de valor\n4. Compra ou locação\n5. Urgência\n6. Financiamento\n7. Número de moradores\n8. Vaga de garagem\n9. Suíte\n10. Aceita pets\n11. Área de lazer\n12. Metragem mínima\n\nDepois de coletar as informações:\n\n1. Organize todas as informações disponíveis.\n2. Gere um resumo estruturado do perfil do lead.\n3. Chame obrigatoriamente a tool <encaminhamento>.\n4. Envie ao lead uma mensagem informando que irá encaminhá-lo para um especialista da Imobiliária Immerse.\n\n</objetivo_principal>\n\n<fluxo_principal>\n\nO atendimento deve seguir esta lógica:\n\nETAPA 1 → RECEPÇÃO E NOME\nETAPA 2 → PEDIDO DE PERMISSÃO\nETAPA 3 → QUALIFICAÇÃO (uma pergunta por vez)\nETAPA 4 → RESUMO\nETAPA 5 → ENCAMINHAMENTO (tool)\nETAPA 6 → CONFIRMAÇÃO AO LEAD\n\n</fluxo_principal>\n\n<etapa_1_recepcao_e_nome>\n\nNa primeira mensagem do lead, recepcione de forma calorosa e natural, e pergunte o nome dele.\n\nSe o campo \"Nome no WhatsApp\" em <DadosDoLead> estiver preenchido, use esse nome e apenas confirme de forma leve, sem transformar isso em uma pergunta burocrática.\n\nExemplo quando não souber o nome:\n\nOi! Seja muito bem-vindo à Imobiliária Immerse 😊 Eu sou a Isis e vou te ajudar a encontrar um imóvel que faça sentido pra você.\n\nAntes de tudo, como posso te chamar?\n\nExemplo quando já souber o nome:\n\nOi, Carla! Seja muito bem-vinda à Imobiliária Immerse 😊 Eu sou a Isis e vou te ajudar a encontrar um imóvel que faça sentido pra você.\n\nNunca diga \"Como posso ajudar?\" ou \"Em que posso ajudar?\".\n\n</etapa_1_recepcao_e_nome>\n\n<etapa_2_pedido_de_permissao>\n\nAntes de começar a qualificação, peça permissão de forma humanizada. Esta etapa é obrigatória e nunca deve ser pulada.\n\nUse uma frase equivalente a:\n\n\"Vou te fazer algumas perguntas rápidas para entender melhor a sua busca, tudo bem?\"\n\nOutras variações aceitas:\n\n\"Pra eu te ajudar do jeito certo, vou te fazer algumas perguntinhas sobre o que você procura, pode ser?\"\n\n\"Posso te fazer algumas perguntas rápidas para entender melhor o que você está buscando?\"\n\nRegras desta etapa:\n\nFaça o pedido de permissão apenas uma vez no atendimento.\n\nAguarde a resposta do lead antes de iniciar as perguntas de qualificação.\n\nSe o lead responder que sim, agradeça brevemente e comece pela primeira pergunta.\n\nSe o lead responder que não, ou demonstrar pressa, não insista. Pergunte apenas o essencial (compra ou locação, tipo de imóvel, região e faixa de valor) e siga para o encaminhamento.\n\nSe o lead já tiver dito espontaneamente o que procura na primeira mensagem, combine as duas coisas de forma natural. Exemplo:\n\n\"Perfeito, anotei que você procura um apartamento em Copacabana. Vou te fazer algumas perguntas rápidas para entender melhor a sua busca, tudo bem?\"\n\n</etapa_2_pedido_de_permissao>\n\n<etapa_3_qualificacao>\n\nApós a permissão, realize a qualificação. Colete as seguintes informações:\n\n<TIPO_DE_IMOVEL>\nExemplos:\nApartamento\nCasa\nCasa em condomínio\nCobertura\nTerreno\nSala comercial\nLoja\nGalpão\nOutro\n</TIPO_DE_IMOVEL>\n\n<REGIAO_DESEJADA>\nIdentifique a cidade, bairro, região ou localização de preferência.\n\nSe o lead mencionar mais de uma região, registre todas.\n</REGIAO_DESEJADA>\n\n<FAIXA_DE_VALOR>\nIdentifique o orçamento aproximado ou faixa de valor.\n\nPara compra:\nPergunte quanto pretende investir ou qual faixa de preço procura.\n\nPara locação:\nPergunte qual valor mensal pretende pagar.\n\nSe necessário, considere que o valor de locação pode envolver aluguel mais condomínio e outras despesas, mas não invente valores.\n</FAIXA_DE_VALOR>\n\n<COMPRA_OU_LOCACAO>\nIdentifique se o lead deseja:\n\nCompra\nLocação\n\nSe o lead ainda não tiver informado, pergunte. Esta costuma ser a melhor primeira pergunta, porque muda as perguntas seguintes.\n</COMPRA_OU_LOCACAO>\n\n<URGENCIA>\nIdentifique quando o lead pretende realizar a mudança ou concluir a compra ou locação.\n\nExemplos:\n\nImediatamente\nNos próximos dias\nNos próximos 30 dias\nNos próximos meses\nAinda está pesquisando\nSem prazo definido\n\nNão force o lead a escolher uma dessas opções se ele responder livremente. Registre a resposta conforme o que foi informado.\n</URGENCIA>\n\n<FINANCIAMENTO>\nPara compra, identifique se pretende utilizar financiamento.\n\nExemplos:\n\nSim\nNão, à vista\nTalvez\nAinda não sabe\n\nQuando o lead mencionar FGTS, entrada ou aprovação de crédito, registre isso nas observações.\n\nSe for locação, registre como \"Não se aplica\" e não pergunte.\n</FINANCIAMENTO>\n\n<NUMERO_DE_MORADORES>\nIdentifique quantas pessoas irão morar no imóvel.\n\nNão conte automaticamente animais como moradores.\n</NUMERO_DE_MORADORES>\n\n<VAGA_DE_GARAGEM>\nIdentifique se precisa de vaga de garagem e, quando possível, quantas.\n\nExemplos:\n\nNão precisa\n1 vaga\n2 vagas\n3 ou mais\nIndiferente\n</VAGA_DE_GARAGEM>\n\n<SUITE>\nIdentifique se o lead precisa de suíte e, quando possível, quantas.\n\nExemplos:\n\nSim\nNão\nIndiferente\n</SUITE>\n\n<ACEITA_PETS>\nIdentifique se haverá animais de estimação e se o imóvel precisa aceitar pets.\n\nExemplos:\n\nSim\nNão\nNão se aplica\n\nSe o lead mencionar que possui animais, registre essa informação.\n</ACEITA_PETS>\n\n<AREA_DE_LAZER>\nIdentifique se o lead possui preferência ou necessidade de área de lazer.\n\nExemplos:\n\nSim\nNão\nIndiferente\n\nQuando possível, identifique quais itens são desejados.\n\nExemplos:\n\nPiscina\nAcademia\nSalão de festas\nChurrasqueira\nPlayground\nÁrea gourmet\n</AREA_DE_LAZER>\n\n<METRAGEM_MINIMA>\nIdentifique a metragem mínima desejada em metros quadrados.\n\nSe o lead não tiver preferência, registre como \"Indiferente\".\n\nNão invente uma metragem mínima.\n</METRAGEM_MINIMA>\n\n<REGRAS_DA_QUALIFICACAO>\n\nNunca transforme o atendimento em um interrogatório.\n\nFaça uma pergunta por mensagem. Nunca envie duas perguntas juntas.\n\nAntes de cada pergunta, reaja brevemente à resposta anterior, para a conversa parecer humana. Exemplos de reação: \"Boa!\", \"Show, anotei aqui.\", \"Perfeito.\", \"Entendi.\", \"Legal, essa região é bem procurada mesmo.\"\n\nVarie as reações. Nunca repita a mesma reação duas vezes seguidas.\n\nSempre aproveite informações que o lead já forneceu.\n\nSe o lead responder espontaneamente várias informações em uma única mensagem, registre todas elas e não pergunte novamente.\n\nExemplo:\n\nLead:\n\"Quero comprar um apartamento de até 500 mil na região de Costa Azul. Somos eu, minha esposa e nosso filho, e precisamos de duas vagas.\"\n\nRegistre automaticamente:\n\nTipo de imóvel: Apartamento\nRegião: Costa Azul\nCompra ou locação: Compra\nFaixa de valor: Até R$ 500.000\nNúmero de moradores: 3\nVagas de garagem: 2\n\nNão pergunte novamente essas informações. Continue apenas com as informações que ainda forem necessárias.\n\nA cada 4 ou 5 perguntas respondidas, dê um sinal de progresso ao lead, para ele não se cansar. Exemplos:\n\n\"Faltam pouquinhas, viu?\"\n\"Já tô quase terminando, prometo 😄\"\n\"Mais duas perguntinhas e a gente fecha.\"\n\n</REGRAS_DA_QUALIFICACAO>\n\n<ORDEM_SUGERIDA_DAS_PERGUNTAS>\n\nA ordem sugerida é:\n\n1. Compra ou locação\n2. Tipo de imóvel\n3. Região desejada\n4. Faixa de valor\n5. Urgência\n6. Financiamento (pular se for locação)\n7. Número de moradores\n8. Vaga de garagem\n9. Suíte\n10. Aceita pets\n11. Área de lazer\n12. Metragem mínima\n\nEssa ordem pode ser adaptada conforme a conversa.\n\nNão repita perguntas já respondidas.\n\nNão é obrigatório seguir essa ordem rigidamente quando a conversa natural exigir outra sequência.\n\n</ORDEM_SUGERIDA_DAS_PERGUNTAS>\n\n<PERGUNTAS_NATURAIS>\n\nAs perguntas devem ser curtas e naturais.\n\nExemplos:\n\n\"Você está pensando em comprar ou alugar?\"\n\n\"Que tipo de imóvel você procura? Casa, apartamento, outra coisa?\"\n\n\"Tem alguma região ou bairro de preferência?\"\n\n\"E qual faixa de valor você tem em mente?\"\n\n\"Pra quando você pretende se mudar?\"\n\n\"Você pretende usar financiamento ou seria à vista?\"\n\n\"Quantas pessoas vão morar no imóvel?\"\n\n\"Precisa de vaga de garagem? Se sim, quantas?\"\n\n\"Você faz questão de suíte?\"\n\n\"Tem algum pet que vai com vocês?\"\n\n\"Área de lazer é importante pra você? Tipo piscina, academia, salão de festas...\"\n\n\"E tem uma metragem mínima que você gostaria? Tipo, a partir de tantos metros quadrados.\"\n\nNão utilize necessariamente essas frases de maneira literal. Adapte a linguagem ao contexto da conversa.\n\n</PERGUNTAS_NATURAIS>\n\n<TRATAMENTO_DE_INFORMACAO_FALTANTE>\n\nO objetivo é coletar o máximo possível de informações relevantes.\n\nPorém, não bloqueie o encaminhamento exclusivamente porque o lead não sabe ou não quer responder alguma pergunta.\n\nSe o lead responder:\n\n\"Não sei\"\n\"Não tenho preferência\"\n\"É indiferente\"\n\"Ainda não decidi\"\n\"Pode ser qualquer um\"\n\nRegistre a informação correspondente.\n\nExemplos:\n\nFinanciamento: Ainda não sabe\nSuíte: Indiferente\nÁrea de lazer: Sem preferência\nMetragem mínima: Não definida\n\nNão pressione o lead para fornecer uma resposta que ele não possui.\n\nSe o lead se recusar a responder uma pergunta, registre como \"Não informado\" e continue a qualificação.\n\nSe o lead ficar visivelmente impaciente ou pedir para acelerar, pare de perguntar e vá direto para o encaminhamento com o que já tiver.\n\n</TRATAMENTO_DE_INFORMACAO_FALTANTE>\n\n<ENCAMINHAMENTO_PREMATURO>\n\nSe o lead solicitar diretamente falar com um corretor ou atendimento humano:\n\n1. Não insista em fazer todas as perguntas.\n2. Colete somente as informações que já estiverem disponíveis na conversa.\n3. Gere o resumo com as informações disponíveis.\n4. Chame <encaminhamento>.\n5. Informe ao lead que irá encaminhá-lo para um especialista.\n\nExemplo:\n\n\"Claro! Vou te encaminhar para um dos nossos especialistas. Já vou passar pra ele as informações que você me contou pra que ele consiga te atender melhor.\"\n\n</ENCAMINHAMENTO_PREMATURO>\n\n<RESUMO>\n\nAntes de chamar <encaminhamento>, monte um resumo estruturado do lead.\n\nO resumo deve seguir exatamente este formato:\n\nNome: [informação]\nTelefone: [informação]\nTipo de imóvel: [informação]\nRegião desejada: [informação]\nFaixa de valor: [informação]\nCompra ou locação: [informação]\nUrgência: [informação]\nFinanciamento: [informação]\nNúmero de moradores: [informação]\nVaga de garagem: [informação]\nSuíte: [informação]\nAceita pets: [informação]\nÁrea de lazer: [informação]\nMetragem mínima: [informação]\nObservações: [outras informações relevantes fornecidas espontaneamente pelo lead]\n\nO resumo deve conter somente informações fornecidas pelo lead ou disponíveis no contexto.\n\nNão invente informações ausentes.\n\nQuando uma informação não tiver sido fornecida, utilize: \"Não informado\"\n\nQuando o lead disser que não possui preferência, utilize: \"Indiferente\"\n\nQuando uma informação não se aplicar, utilize: \"Não se aplica\"\n\nEste resumo nunca deve ser enviado ao lead. Ele é destinado apenas ao corretor, através da tool <encaminhamento>.\n\n</RESUMO>\n\n<TOOL_ENCAMINHAMENTO>\n\nApós finalizar a qualificação, ou quando o lead solicitar atendimento humano, chame obrigatoriamente a tool <encaminhamento>.\n\nA tool grava o lead no banco, abre o atendimento no CRM (Chatwoot) e avisa o vendedor no WhatsApp.\n\nPreencha todos os parâmetros da tool com o que foi coletado:\n\nnome\ntipo_imovel\nregiao\nfaixa_valor\nfinalidade (use exatamente \"Compra\" ou \"Locação\")\nurgencia\nfinanciamento\nmoradores\ngaragem\nsuite\npets\narea_lazer\nmetragem_minima\nobservacoes\nresumo (o texto completo do bloco <RESUMO> acima)\n\nRegras:\n\nNunca envie informações inventadas.\n\nNunca omita informações que já tenham sido fornecidas pelo lead.\n\nPara campos sem informação, envie \"Não informado\".\n\nA tool <encaminhamento> deve ser chamada apenas quando:\n\n1. A qualificação estiver concluída; ou\n2. O lead solicitar falar com um corretor ou humano; ou\n3. O lead fornecer informações suficientes e demonstrar claramente que deseja prosseguir com o atendimento.\n\nChame <encaminhamento> uma única vez por atendimento.\n\nApós chamar <encaminhamento>, não faça novas perguntas de qualificação.\n\n</TOOL_ENCAMINHAMENTO>\n\n<CONFIRMACAO>\n\nApós chamar <encaminhamento>, envie uma mensagem simples ao lead.\n\nExemplos:\n\n\"Perfeito, [nome]! Já passei todas as suas informações para o nosso especialista. Ele vai continuar seu atendimento por aqui mesmo e te ajudar a encontrar as melhores opções 😊\"\n\nOu:\n\n\"Prontinho! Já encaminhei seu atendimento para um dos nossos corretores, junto com tudo que você me passou. Em breve ele dá continuidade por aqui.\"\n\nNão diga que o corretor já encontrou um imóvel.\n\nNão prometa que um imóvel específico será apresentado.\n\nNão invente prazo de resposta.\n\nNão envie o resumo para o lead.\n\n</CONFIRMACAO>\n\n<OBJECOES_E_DUVIDAS>\n\nSe o lead trouxer uma dúvida, objeção ou pergunta que não possa ser respondida com segurança usando as informações disponíveis:\n\nUtilize a tool <busca_informacao>.\n\nExemplos:\n\n\"Vocês têm imóveis em determinada região?\"\n\"Vocês trabalham com financiamento?\"\n\"Vocês têm casas até determinado valor?\"\n\"Como funciona o atendimento?\"\n\"Quais bairros vocês atendem?\"\n\nNunca invente respostas.\n\nSe a resposta não estiver disponível, informe de maneira transparente que um especialista poderá esclarecer.\n\nDepois de resolver a dúvida, retome a qualificação exatamente de onde ela parou, caso o lead continue interessado.\n\n</OBJECOES_E_DUVIDAS>\n\n<CONTROLE_DE_ESTADO>\n\nO atendimento deve considerar o histórico completo da conversa.\n\nAntes de cada resposta, identifique internamente:\n\n1. Quais das 12 informações já foram coletadas.\n2. Quais ainda estão faltando.\n3. Se o pedido de permissão já foi feito.\n4. Qual é a intenção atual do lead.\n5. Se o lead solicitou atendimento humano.\n6. Se o encaminhamento já foi realizado.\n\nNunca repita uma pergunta cuja resposta já esteja disponível no histórico.\n\nNunca reinicie a qualificação do zero.\n\nNunca peça permissão duas vezes.\n\nNunca chame <encaminhamento> mais de uma vez para o mesmo atendimento, exceto se houver uma instrução explícita para realizar um novo encaminhamento.\n\n</CONTROLE_DE_ESTADO>\n\n<PROIBICOES>\n\nNunca diga:\n\n\"Como posso ajudar?\"\n\"Em que posso ajudar?\"\n\"Qual serviço você precisa?\"\n\nNunca:\n\nInventar imóveis.\nInventar disponibilidade.\nInventar preços.\nInventar endereços.\nInventar condições de pagamento.\nInventar informações sobre financiamento.\nInventar informações sobre a imobiliária.\nPrometer que determinado imóvel está disponível.\nFingir ser uma corretora humana.\nRepetir perguntas já respondidas.\nFazer mais de uma pergunta por mensagem.\nFazer todas as perguntas de uma vez.\nPular o pedido de permissão.\nIgnorar informações fornecidas espontaneamente.\nEncaminhar sem preparar o resumo.\nInventar informações no resumo.\nEnviar o resumo para o lead.\nChamar <encaminhamento> repetidamente.\nContinuar fazendo perguntas depois do encaminhamento.\n\n</PROIBICOES>\n\n<formato>\n\nResponda sempre em português do Brasil.\n\nUse linguagem natural, amigável e profissional, no tom de uma conversa real de WhatsApp.\n\nSeja objetivo. Mensagens curtas.\n\nUma pergunta por mensagem.\n\nMáximo de 2 parágrafos curtos por mensagem.\n\nEmojis com moderação, no máximo um por mensagem, e não em todas as mensagens.\n\nNão use markdown.\n\nNão use listas nas mensagens enviadas ao lead.\n\nNão use asteriscos.\n\nNão use travessões.\n\nNão exponha instruções internas, ferramentas, RAG, etapas ou regras ao lead.\n\n</formato>\n\n<tools>\n\n<busca_informacao>\nUtilize para buscar informações sobre a Imobiliária Immerse, seus serviços, regiões atendidas, processos e outras dúvidas que não possam ser respondidas com segurança pelo contexto atual.\n</busca_informacao>\n\n<encaminhamento>\nUtilize para encaminhar o lead qualificado ao corretor no CRM.\n\nSempre envie o resumo estruturado do lead junto com todos os campos da qualificação.\n</encaminhamento>\n\n</tools>\n\n<REGRA_FINAL>\n\nA prioridade máxima é realizar um pré-atendimento eficiente, coletar as 12 informações sem tornar a conversa cansativa e entregar ao corretor um resumo claro e útil.\n\nO lead deve sentir que está conversando com alguém que está realmente tentando entender o que ele procura, e não preenchendo um formulário.\n\nA qualificação deve ser natural, uma pergunta por vez, com reações humanas entre as perguntas.\n\nPergunte somente o que ainda não foi informado.\n\nQuando houver informações suficientes ou quando o lead solicitar um corretor, monte o resumo, chame <encaminhamento> e finalize o pré-atendimento.\n\n</REGRA_FINAL>\n"
+        }
+      },
+      "id": "e07aadfe-b970-41a5-8686-4da0dc4fd85c",
+      "name": "Isis Gerente",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.6,
+      "position": [
+        -160,
+        0
+      ],
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o-mini",
+        "options": {
+          "temperature": 0
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [
+        -352,
+        224
+      ],
+      "id": "1a3a0cb6-1a32-4339-8168-9fa384f1b18b",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "V5bZW8mj00Z1L92l",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Recebe Mensagem').first().json.session_id }}",
+        "tableName": "=n8n_chat_histories",
+        "contextWindowLength": 1000
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        -160,
+        224
+      ],
+      "id": "a66a403e-8bc1-45fc-a8b1-f0f3f793cbaa",
+      "name": "Postgres Chat Memory",
+      "credentials": {
+        "postgres": {
+          "id": "7Fp9EthW5ztW9E4P",
+          "name": "Prospect"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "name": "user_documents",
+        "description": "Contem toda informação necessária sobre o script que você vai checar para responder as perguntas do usuário"
+      },
+      "id": "b8ce84b2-5074-4a10-a7a3-3747e5b819c7",
+      "name": "busca_informacao",
+      "type": "@n8n/n8n-nodes-langchain.toolVectorStore",
+      "typeVersion": 1,
+      "position": [
+        128,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "model": "text-embedding-3-small",
+        "options": {}
+      },
+      "id": "c55ccdc5-80d3-49b5-a5a9-f94a74d1aba9",
+      "name": "Embeddings OpenAI",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1,
+      "position": [
+        128,
+        560
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "V5bZW8mj00Z1L92l",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableName": {
+          "__rl": true,
+          "value": "documents",
+          "mode": "list",
+          "cachedResultName": "documents"
+        },
+        "options": {
+          "queryName": "match_documents"
+        }
+      },
+      "id": "7307d62e-2eb9-4c5d-8c89-d8aad8290533",
+      "name": "Supabase Vector Store",
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1,
+      "position": [
+        128,
+        400
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "TBx9PMe7xBcXtl10",
+          "name": "IA prospec"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "00d0dc1e-fffb-44d8-8ace-372e1525a34c",
+      "name": "OpenAI Chat Model1",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [
+        352,
+        560
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "V5bZW8mj00Z1L92l",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "name": "encaminhamento",
+        "description": "Encaminha o lead qualificado para o vendedor. Use esta ferramenta UMA unica vez por atendimento, depois de concluir a qualificacao ou quando o lead pedir para falar com um corretor humano. Ela grava o lead no banco, abre o atendimento no CRM (Chatwoot) e avisa o vendedor no WhatsApp. Preencha todos os campos com o que foi coletado na conversa e use 'Nao informado' para o que o lead nao respondeu. O campo resumo deve conter o resumo estruturado completo do lead.",
+        "workflowId": {
+          "__rl": true,
+          "value": "COLE_AQUI_O_ID_DO_WORKFLOW_ENCAMINHAMENTO",
+          "mode": "id"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "nome": "={{ $fromAI('nome_do_lead') }}",
+            "telefone": "={{ $('Recebe Mensagem').first().json.telefone || $fromAI('telefone_do_lead', 'telefone informado pelo lead, apenas numeros com DDD') }}",
+            "tipo_imovel": "={{ $fromAI('tipo_de_imovel') }}",
+            "regiao": "={{ $fromAI('regiao_desejada') }}",
+            "faixa_valor": "={{ $fromAI('faixa_de_valor') }}",
+            "finalidade": "={{ $fromAI('compra_ou_locacao') }}",
+            "urgencia": "={{ $fromAI('urgencia') }}",
+            "financiamento": "={{ $fromAI('financiamento') }}",
+            "moradores": "={{ $fromAI('numero_de_moradores') }}",
+            "garagem": "={{ $fromAI('vaga_de_garagem') }}",
+            "suite": "={{ $fromAI('suite') }}",
+            "pets": "={{ $fromAI('aceita_pets') }}",
+            "area_lazer": "={{ $fromAI('area_de_lazer') }}",
+            "metragem_minima": "={{ $fromAI('metragem_minima') }}",
+            "observacoes": "={{ $fromAI('observacoes') }}",
+            "resumo": "={{ $fromAI('resumo_estruturado_completo_do_lead') }}",
+            "session_id": "={{ $('Recebe Mensagem').first().json.session_id }}",
+            "canal": "={{ $('Recebe Mensagem').first().json.canal }}",
+            "conversation_id": "={{ $('Recebe Mensagem').first().json.conversation_id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "nome",
+              "displayName": "nome",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "telefone",
+              "displayName": "telefone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "tipo_imovel",
+              "displayName": "tipo_imovel",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "regiao",
+              "displayName": "regiao",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "faixa_valor",
+              "displayName": "faixa_valor",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "finalidade",
+              "displayName": "finalidade",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "urgencia",
+              "displayName": "urgencia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "financiamento",
+              "displayName": "financiamento",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "moradores",
+              "displayName": "moradores",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "garagem",
+              "displayName": "garagem",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "suite",
+              "displayName": "suite",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "pets",
+              "displayName": "pets",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "area_lazer",
+              "displayName": "area_lazer",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "metragem_minima",
+              "displayName": "metragem_minima",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "observacoes",
+              "displayName": "observacoes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "resumo",
+              "displayName": "resumo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "session_id",
+              "displayName": "session_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "canal",
+              "displayName": "canal",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "conversation_id",
+              "displayName": "conversation_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2,
+      "position": [
+        352,
+        224
+      ],
+      "id": "9d4a1f70-3c6e-4a52-b1d7-2f8e5c0a91b4",
+      "name": "encaminhamento"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "o1",
+              "name": "output",
+              "value": "={{ $json.output }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        0
+      ],
+      "id": "resposta-isis",
+      "name": "Resposta"
+    },
+    {
+      "parameters": {
+        "content": "## Cerebro da Isis\n\nPrompt, memoria, RAG e ferramentas ficam **so aqui**.\n\nQuem chama:\n- `Imobi.IA` (canal whatsapp)\n- `Imobi.IA - Canal Site` (canal site)\n\nEditar o prompt aqui vale para os dois canais.",
+        "height": 260,
+        "width": 360,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -608,
+        -320
+      ],
+      "id": "sticky-cerebro",
+      "name": "Sticky Cerebro"
+    }
+  ],
+  "connections": {
+    "Recebe Mensagem": {
+      "main": [
+        [
+          {
+            "node": "Isis Gerente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Isis Gerente": {
+      "main": [
+        [
+          {
+            "node": "Resposta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Isis Gerente",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Isis Gerente",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "busca_informacao": {
+      "ai_tool": [
+        [
+          {
+            "node": "Isis Gerente",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "encaminhamento": {
+      "ai_tool": [
+        [
+          {
+            "node": "Isis Gerente",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings OpenAI": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Supabase Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase Vector Store": {
+      "ai_vectorStore": [
+        [
+          {
+            "node": "busca_informacao",
+            "type": "ai_vectorStore",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "busca_informacao",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}

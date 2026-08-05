@@ -1,0 +1,768 @@
+{
+  "name": "Imobi.IA - Canal Site",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "chatwoot-site",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -1600,
+        0
+      ],
+      "id": "webhook-cw",
+      "name": "Webhook Chatwoot",
+      "webhookId": "e1f6a4c0-1b2d-4e9a-9f1a-3c5d7e8b9a01"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c1",
+              "name": "chatwoot_url",
+              "value": "https://SEU-CHATWOOT.com.br",
+              "type": "string"
+            },
+            {
+              "id": "c2",
+              "name": "chatwoot_account_id",
+              "value": "1",
+              "type": "string"
+            },
+            {
+              "id": "c3",
+              "name": "chatwoot_inbox_id",
+              "value": "1",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1408,
+        0
+      ],
+      "id": "config-site",
+      "name": "Config Site"
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $json.body || {};\nconst conv = b.conversation || {};\nconst sender = b.sender || {};\n\nreturn [{\n  json: {\n    event: b.event || '',\n    message_type: b.message_type || '',\n    private: !!b.private,\n    conteudo: b.content || '',\n    conversation_id: String(conv.id || ''),\n    inbox_id: String(conv.inbox_id || (b.inbox && b.inbox.id) || ''),\n    nome: sender.name || sender.email || 'Visitante do site',\n    telefone: (sender.phone_number || '').replace(/\\D/g, ''),\n    assignee_id: (conv.meta && conv.meta.assignee && conv.meta.assignee.id)\n      || conv.assignee_id || '',\n  },\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1216,
+        0
+      ],
+      "id": "extrai-dados",
+      "name": "Extrai Dados"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.event }}",
+                    "rightValue": "message_created",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "mensagem"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.event }}",
+                    "rightValue": "conversation_updated",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  },
+                  {
+                    "leftValue": "={{ $json.assignee_id }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEmpty"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "corretor_assumiu"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "none"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        -1024,
+        0
+      ],
+      "id": "switch-evento",
+      "name": "Switch Evento"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "e1",
+              "leftValue": "={{ $json.message_type }}",
+              "rightValue": "incoming",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "e2",
+              "leftValue": "={{ $json.private }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "e3",
+              "leftValue": "={{ $json.inbox_id }}",
+              "rightValue": "={{ $('Config Site').first().json.chatwoot_inbox_id }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -816,
+        -96
+      ],
+      "id": "eh-mensagem-do-lead",
+      "name": "É Mensagem do Lead?"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "propertyName": "bloqueado",
+        "key": "=site_{{ $json.conversation_id }}_block",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        -608,
+        -96
+      ],
+      "id": "verifica-pausa",
+      "name": "Verifica Pausa",
+      "credentials": {
+        "redis": {
+          "id": "Dr2yUkSVjsLZcCVx",
+          "name": "Prospec"
+        }
+      },
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "p1",
+              "leftValue": "={{ $json.bloqueado }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -400,
+        -96
+      ],
+      "id": "isis-pausada",
+      "name": "Isis Pausada?"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -192,
+        -224
+      ],
+      "id": "nao-responde",
+      "name": "Não Responde (corretor no controle)"
+    },
+    {
+      "parameters": {
+        "operation": "push",
+        "list": "=site_{{ $json.conversation_id }}",
+        "messageData": "={{ $json.conteudo }}",
+        "tail": true
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        -192,
+        0
+      ],
+      "id": "agrupa-mensagens",
+      "name": "Agrupa Mensagens",
+      "credentials": {
+        "redis": {
+          "id": "Dr2yUkSVjsLZcCVx",
+          "name": "Prospec"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 8
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "espera-8s",
+      "name": "Espera 8s",
+      "webhookId": "b4c2e1a0-6d3f-4a8b-9e0c-1f2a3b4c5d6e"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "keyType": "list",
+        "key": "=site_{{ $('Extrai Dados').first().json.conversation_id }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        192,
+        0
+      ],
+      "id": "le-lista",
+      "name": "Lê Lista de Mensagens",
+      "credentials": {
+        "redis": {
+          "id": "Dr2yUkSVjsLZcCVx",
+          "name": "Prospec"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "ultima-igual",
+              "leftValue": "={{ $json.propertyName.last() }}",
+              "rightValue": "={{ $('Extrai Dados').first().json.conteudo }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        384,
+        0
+      ],
+      "id": "eh-a-mais-recente",
+      "name": "É a Mensagem Mais Recente?"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        576,
+        96
+      ],
+      "id": "ainda-digitando",
+      "name": "Ainda Digitando (aguarda outra rodada)"
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "key": "=site_{{ $('Extrai Dados').first().json.conversation_id }}"
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        576,
+        -96
+      ],
+      "id": "limpa-fila",
+      "name": "Limpa Fila",
+      "credentials": {
+        "redis": {
+          "id": "Dr2yUkSVjsLZcCVx",
+          "name": "Prospec"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const msgs = $input.all().map((i) => i.json.conteudo).filter(Boolean);\nconst last = $input.last().json;\n\nreturn [{\n  json: {\n    mensagem: msgs.join('\\n'),\n    session_id: 'site_' + last.conversation_id,\n    nome: last.nome,\n    telefone: last.telefone,\n    canal: 'site',\n    conversation_id: last.conversation_id,\n  },\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        768,
+        -96
+      ],
+      "id": "monta-entrada",
+      "name": "Monta Entrada do Cérebro"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "COLE_AQUI_O_ID_DO_WORKFLOW_CEREBRO",
+          "mode": "id"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "mensagem": "={{ $json.mensagem }}",
+            "session_id": "={{ $json.session_id }}",
+            "nome": "={{ $json.nome }}",
+            "telefone": "={{ $json.telefone }}",
+            "canal": "={{ $json.canal }}",
+            "conversation_id": "={{ $json.conversation_id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "mensagem",
+              "displayName": "mensagem",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "session_id",
+              "displayName": "session_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "nome",
+              "displayName": "nome",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "telefone",
+              "displayName": "telefone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "canal",
+              "displayName": "canal",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "conversation_id",
+              "displayName": "conversation_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        960,
+        -96
+      ],
+      "id": "chama-cerebro-site",
+      "name": "Chama Cérebro"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config Site').first().json.chatwoot_url }}/api/v1/accounts/{{ $('Config Site').first().json.chatwoot_account_id }}/conversations/{{ $('Monta Entrada do Cérebro').first().json.conversation_id }}/messages",
+        "authentication": "genericCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ content: $json.output, message_type: 'outgoing', private: false }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1152,
+        -96
+      ],
+      "id": "responde-chatwoot",
+      "name": "Responde no Chatwoot",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CHATWOOT_HEADER_AUTH",
+          "name": "Chatwoot API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "set",
+        "key": "=site_{{ $json.conversation_id }}_block",
+        "value": "true",
+        "keyType": "string",
+        "expire": true,
+        "ttl": 86400
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        -608,
+        -320
+      ],
+      "id": "pausa-por-corretor",
+      "name": "Pausa: Corretor Assumiu",
+      "credentials": {
+        "redis": {
+          "id": "Dr2yUkSVjsLZcCVx",
+          "name": "Prospec"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "content": "## Canal Site\n\nEscuta o webhook do Chatwoot (mensagens do widget do site).\n\nConfigure em Config Site: chatwoot_url, account_id, inbox_id.\n\nNo Chatwoot: Settings > Integrations > Webhooks, aponte para a URL deste webhook, eventos message_created e conversation_updated.",
+        "height": 260,
+        "width": 420,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1616,
+        -480
+      ],
+      "id": "s40774312",
+      "name": "Nota 407743"
+    },
+    {
+      "parameters": {
+        "content": "## Pausa automática\n\nSe um corretor humano é atribuído à conversa no Chatwoot, a Isis para de responder por 24h (mesma regra do encaminhamento).",
+        "height": 200,
+        "width": 340,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -816,
+        -480
+      ],
+      "id": "s76487813",
+      "name": "Nota 764878"
+    },
+    {
+      "parameters": {
+        "content": "## Debounce\n\nEspera 8s para agrupar mensagens digitadas em sequência, como o fluxo do WhatsApp faz com 60s. No chat de site o usuário espera resposta rápida, por isso o tempo é bem menor.",
+        "height": 160,
+        "width": 340,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        160
+      ],
+      "id": "s27485102",
+      "name": "Nota 274851"
+    }
+  ],
+  "connections": {
+    "Webhook Chatwoot": {
+      "main": [
+        [
+          {
+            "node": "Config Site",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config Site": {
+      "main": [
+        [
+          {
+            "node": "Extrai Dados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extrai Dados": {
+      "main": [
+        [
+          {
+            "node": "Switch Evento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch Evento": {
+      "main": [
+        [
+          {
+            "node": "É Mensagem do Lead?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Pausa: Corretor Assumiu",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "É Mensagem do Lead?": {
+      "main": [
+        [
+          {
+            "node": "Verifica Pausa",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Verifica Pausa": {
+      "main": [
+        [
+          {
+            "node": "Isis Pausada?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Isis Pausada?": {
+      "main": [
+        [
+          {
+            "node": "Não Responde (corretor no controle)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Agrupa Mensagens",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agrupa Mensagens": {
+      "main": [
+        [
+          {
+            "node": "Espera 8s",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Espera 8s": {
+      "main": [
+        [
+          {
+            "node": "Lê Lista de Mensagens",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lê Lista de Mensagens": {
+      "main": [
+        [
+          {
+            "node": "É a Mensagem Mais Recente?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "É a Mensagem Mais Recente?": {
+      "main": [
+        [
+          {
+            "node": "Limpa Fila",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ainda Digitando (aguarda outra rodada)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limpa Fila": {
+      "main": [
+        [
+          {
+            "node": "Monta Entrada do Cérebro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Monta Entrada do Cérebro": {
+      "main": [
+        [
+          {
+            "node": "Chama Cérebro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chama Cérebro": {
+      "main": [
+        [
+          {
+            "node": "Responde no Chatwoot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}

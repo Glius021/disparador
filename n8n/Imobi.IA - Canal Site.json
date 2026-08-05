@@ -57,7 +57,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const b = $json.body || {};\nconst conv = b.conversation || {};\nconst sender = b.sender || {};\n\nreturn [{\n  json: {\n    event: b.event || '',\n    message_type: b.message_type || '',\n    private: !!b.private,\n    conteudo: b.content || '',\n    conversation_id: String(conv.id || ''),\n    inbox_id: String(conv.inbox_id || (b.inbox && b.inbox.id) || ''),\n    nome: sender.name || sender.email || 'Visitante do site',\n    telefone: (sender.phone_number || '').replace(/\\D/g, ''),\n    assignee_id: (conv.meta && conv.meta.assignee && conv.meta.assignee.id)\n      || conv.assignee_id || '',\n  },\n}];\n"
+        "jsCode": "const b = $('Webhook Chatwoot').first().json.body || {};\nconst conv = b.conversation || {};\nconst sender = b.sender || {};\n\nreturn [{\n  json: {\n    event: b.event || '',\n    message_type: b.message_type || '',\n    private: !!b.private,\n    conteudo: b.content || '',\n    conversation_id: String(conv.id || ''),\n    inbox_id: String(conv.inbox_id || (b.inbox && b.inbox.id) || ''),\n    nome: sender.name || sender.email || 'Visitante do site',\n    telefone: (sender.phone_number || '').replace(/\\D/g, ''),\n    assignee_id: (conv.meta && conv.meta.assignee && conv.meta.assignee.id)\n      || conv.assignee_id || '',\n  },\n}];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -537,13 +537,7 @@
             "node": "Config Site",
             "type": "main",
             "index": 0
-          }
-        ]
-      ]
-    },
-    "Config Site": {
-      "main": [
-        [
+          },
           {
             "node": "Extrai Dados",
             "type": "main",

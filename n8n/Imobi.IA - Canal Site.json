@@ -5,16 +5,16 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "chatwoot-site",
-        "options": {},
-        "responseMode": "onReceived"
+        "responseMode": "onReceived",
+        "options": {}
       },
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [
-        -1600,
-        0
+        -208,
+        400
       ],
-      "id": "webhook-cw",
+      "id": "a80719f3-dfd2-42d4-8025-a959eee7fc24",
       "name": "Webhook Chatwoot",
       "webhookId": "e1f6a4c0-1b2d-4e9a-9f1a-3c5d7e8b9a01"
     },
@@ -25,90 +25,47 @@
             {
               "id": "c1",
               "name": "chatwoot_url",
-              "value": "https://SEU-CHATWOOT.com.br",
+              "value": "https://im-chatwoot.dskq5i.easypanel.host",
               "type": "string"
             },
             {
               "id": "c2",
               "name": "chatwoot_account_id",
-              "value": "1",
+              "value": "2",
               "type": "string"
             },
             {
               "id": "c3",
               "name": "chatwoot_inbox_id",
-              "value": "1",
+              "value": "2",
               "type": "string"
             }
           ]
         },
-        "options": {
-          "includeOtherFields": true
-        }
+        "includeOtherFields": true,
+        "options": {}
       },
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -1408,
-        0
+        0,
+        400
       ],
-      "id": "config-site",
+      "id": "266676c5-fa54-4cb0-8d7b-41e28882354b",
       "name": "Config Site"
     },
     {
       "parameters": {
-        "jsCode": "const b = $('Webhook Chatwoot').first().json.body || {};\nconst conv = b.conversation || {};\nconst sender = b.sender || {};\n\nreturn [{\n  json: {\n    event: b.event || '',\n    message_type: b.message_type || '',\n    private: !!b.private,\n    conteudo: b.content || '',\n    conversation_id: String(conv.id || ''),\n    inbox_id: String(conv.inbox_id || (b.inbox && b.inbox.id) || ''),\n    nome: sender.name || sender.email || 'Visitante do site',\n    telefone: (sender.phone_number || '').replace(/\\D/g, ''),\n    assignee_id: (conv.meta && conv.meta.assignee && conv.meta.assignee.id)\n      || conv.assignee_id || '',\n  },\n}];\n"
+        "jsCode": "// le direto do webhook pelo nome: nao depende de qual node roda antes\nconst b = $('Webhook Chatwoot').first().json.body || {};\nconst conv = b.conversation || {};\nconst sender = b.sender || {};\n\nreturn [{\n  json: {\n    event: b.event || '',\n    message_type: b.message_type || '',\n    private: b.private === true,\n    conteudo: (b.content || '').trim(),\n    conversation_id: String(conv.id || ''),\n    inbox_id: String(conv.inbox_id || (b.inbox && b.inbox.id) || ''),\n    nome: sender.name || sender.email || 'Visitante do site',\n    telefone: String(sender.phone_number || '').replace(/\\D/g, ''),\n    email: sender.email || '',\n  },\n}];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -1216,
-        0
+        208,
+        400
       ],
-      "id": "extrai-dados",
+      "id": "fd8b0713-4cc8-426d-a446-b651e7058f42",
       "name": "Extrai Dados"
-    },
-    {
-      "parameters": {
-        "rules": {
-          "values": [
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": true,
-                  "leftValue": "",
-                  "typeValidation": "loose",
-                  "version": 1
-                },
-                "conditions": [
-                  {
-                    "leftValue": "={{ $json.event }}",
-                    "rightValue": "message_created",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    }
-                  }
-                ],
-                "combinator": "and"
-              },
-              "renameOutput": true,
-              "outputKey": "mensagem"
-            }
-          ]
-        },
-        "options": {
-          "fallbackOutput": "none"
-        }
-      },
-      "type": "n8n-nodes-base.switch",
-      "typeVersion": 3,
-      "position": [
-        -1024,
-        0
-      ],
-      "id": "switch-evento",
-      "name": "Switch Evento"
     },
     {
       "parameters": {
@@ -120,6 +77,15 @@
             "version": 2
           },
           "conditions": [
+            {
+              "id": "e0",
+              "leftValue": "={{ $json.event }}",
+              "rightValue": "message_created",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
             {
               "id": "e1",
               "leftValue": "={{ $json.message_type }}",
@@ -146,6 +112,16 @@
                 "type": "string",
                 "operation": "equals"
               }
+            },
+            {
+              "id": "e4",
+              "leftValue": "={{ $json.conteudo }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
             }
           ],
           "combinator": "and"
@@ -155,11 +131,22 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        -816,
-        -96
+        416,
+        400
       ],
-      "id": "eh-mensagem-do-lead",
+      "id": "8b82cbcd-d040-43c6-bf38-15e117479c55",
       "name": "É Mensagem do Lead?"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        624,
+        528
+      ],
+      "id": "ignora-evento",
+      "name": "Ignora (eco do bot, nota ou outra inbox)"
     },
     {
       "parameters": {
@@ -171,10 +158,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        -608,
-        -96
+        624,
+        288
       ],
-      "id": "verifica-pausa",
+      "id": "a405a6ac-d6c2-49d9-828a-1c6f41ee08ae",
       "name": "Verifica Pausa",
       "credentials": {
         "redis": {
@@ -212,10 +199,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        -400,
-        -96
+        832,
+        288
       ],
-      "id": "isis-pausada",
+      "id": "017b6357-b81b-4537-9873-dba79c121971",
       "name": "Isis Pausada?"
     },
     {
@@ -223,10 +210,10 @@
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
       "position": [
-        -192,
-        -224
+        1040,
+        160
       ],
-      "id": "nao-responde",
+      "id": "0ad2d29a-f375-4ddf-913f-b18e820b6537",
       "name": "Não Responde (corretor no controle)"
     },
     {
@@ -239,10 +226,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        -192,
-        0
+        1040,
+        384
       ],
-      "id": "agrupa-mensagens",
+      "id": "b63c8d56-0caa-4b44-b41b-67368afa954c",
       "name": "Agrupa Mensagens",
       "credentials": {
         "redis": {
@@ -258,16 +245,17 @@
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
       "position": [
-        0,
-        0
+        1248,
+        384
       ],
-      "id": "espera-8s",
+      "id": "2540d648-dd5c-4edd-bc7b-965e33c414e1",
       "name": "Espera 8s",
       "webhookId": "b4c2e1a0-6d3f-4a8b-9e0c-1f2a3b4c5d6e"
     },
     {
       "parameters": {
         "operation": "get",
+        "propertyName": "fila",
         "keyType": "list",
         "key": "=site_{{ $('Extrai Dados').first().json.conversation_id }}",
         "options": {}
@@ -275,10 +263,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        192,
-        0
+        1456,
+        384
       ],
-      "id": "le-lista",
+      "id": "968930d4-6c8e-4048-8085-12d14a30ec40",
       "name": "Lê Lista de Mensagens",
       "credentials": {
         "redis": {
@@ -293,13 +281,13 @@
           "options": {
             "caseSensitive": true,
             "leftValue": "",
-            "typeValidation": "strict",
+            "typeValidation": "loose",
             "version": 2
           },
           "conditions": [
             {
               "id": "ultima-igual",
-              "leftValue": "={{ $json.propertyName.last() }}",
+              "leftValue": "={{ ($json.fila || []).last() || '' }}",
               "rightValue": "={{ $('Extrai Dados').first().json.conteudo }}",
               "operator": {
                 "type": "string",
@@ -314,10 +302,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        384,
-        0
+        1664,
+        384
       ],
-      "id": "eh-a-mais-recente",
+      "id": "f3dade35-b00e-4e90-8e1b-8504f19fc915",
       "name": "É a Mensagem Mais Recente?"
     },
     {
@@ -325,10 +313,10 @@
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
       "position": [
-        576,
-        96
+        1872,
+        512
       ],
-      "id": "ainda-digitando",
+      "id": "3e30d1f0-8c57-429f-b71e-7359dbd27083",
       "name": "Ainda Digitando (aguarda outra rodada)"
     },
     {
@@ -339,10 +327,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        576,
-        -96
+        1872,
+        288
       ],
-      "id": "limpa-fila",
+      "id": "6da11bef-6c3c-43a6-b43b-bf2ac91d2b72",
       "name": "Limpa Fila",
       "credentials": {
         "redis": {
@@ -353,23 +341,24 @@
     },
     {
       "parameters": {
-        "jsCode": "const msgs = $input.all().map((i) => i.json.conteudo).filter(Boolean);\nconst last = $input.last().json;\n\nreturn [{\n  json: {\n    mensagem: msgs.join('\\n'),\n    session_id: 'site_' + last.conversation_id,\n    nome: last.nome,\n    telefone: last.telefone,\n    canal: 'site',\n    conversation_id: last.conversation_id,\n  },\n}];\n"
+        "jsCode": "// a fila vem do Redis, nao do item que chega neste node.\n// era esse o bug: $input.all() traz 1 item so, ignorando o agrupamento.\nconst base = $('Extrai Dados').first().json;\nconst bruto = $('Lê Lista de Mensagens').first().json.fila;\nconst lista = Array.isArray(bruto) ? bruto : (bruto ? [bruto] : []);\n\nconst mensagem = lista.filter(Boolean).join('\\n') || base.conteudo;\n\nreturn [{\n  json: {\n    mensagem,\n    session_id: 'site_' + base.conversation_id,\n    nome: base.nome,\n    telefone: base.telefone,\n    canal: 'site',\n    conversation_id: base.conversation_id,\n  },\n}];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        768,
-        -96
+        2080,
+        288
       ],
-      "id": "monta-entrada",
+      "id": "4137af4b-16e2-4116-aa99-e6f2af4cf4b9",
       "name": "Monta Entrada do Cérebro"
     },
     {
       "parameters": {
         "workflowId": {
           "__rl": true,
-          "value": "COLE_AQUI_O_ID_DO_WORKFLOW_CEREBRO",
-          "mode": "id"
+          "value": "zyUMRBwNp8S0mEXC",
+          "mode": "id",
+          "cachedResultUrl": "/workflow/zyUMRBwNp8S0mEXC"
         },
         "workflowInputs": {
           "mappingMode": "defineBelow",
@@ -448,16 +437,16 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
-        960,
-        -96
+        2288,
+        288
       ],
-      "id": "chama-cerebro-site",
+      "id": "87a336b3-6155-43dc-b813-45679d486d9a",
       "name": "Chama Cérebro"
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $('Config Site').first().json.chatwoot_url }}/api/v1/accounts/{{ $('Config Site').first().json.chatwoot_account_id }}/conversations/{{ $('Monta Entrada do Cérebro').first().json.conversation_id }}/messages",
+        "url": "={{ $('Config Site').first().json.chatwoot_url }}/api/v1/accounts/{{ $('Config Site').first().json.chatwoot_account_id }}/conversations/{{ $('Extrai Dados').first().json.conversation_id }}/messages",
         "authentication": "genericCredentialType",
         "nodeCredentialType": "httpHeaderAuth",
         "sendBody": true,
@@ -468,10 +457,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1152,
-        -96
+        2496,
+        288
       ],
-      "id": "responde-chatwoot",
+      "id": "3eb52cca-3e8d-4db2-b5c0-30cf9a17de4b",
       "name": "Responde no Chatwoot",
       "credentials": {
         "httpHeaderAuth": {
@@ -482,51 +471,51 @@
     },
     {
       "parameters": {
-        "content": "## Canal Site\n\nEscuta o webhook do Chatwoot (mensagens do widget do site).\n\nConfigure em Config Site: chatwoot_url, account_id, inbox_id.\n\nNo Chatwoot: Settings > Integrations > Webhooks, aponte para a URL deste webhook, eventos message_created e conversation_updated.",
-        "height": 260,
+        "content": "## Canal Site — leia antes de rodar\n\n**1.** Crie a credencial Header Auth chamada `Chatwoot API`\n(Name: `api_access_token`, Value: seu token do Chatwoot)\ne selecione ela no node **Responde no Chatwoot**.\n\n**2.** Confira o node **Config Site**. Os valores vieram do seu payload real:\n- url do Chatwoot (NAO a do n8n)\n- account_id: 2\n- inbox_id: 2\n\n**3.** No Chatwoot: Settings > Integrations > Webhooks,\naponte para a URL de producao deste webhook,\nevento `message_created`.",
+        "height": 400,
         "width": 420,
         "color": 4
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -1616,
-        -480
+        -240,
+        -80
       ],
-      "id": "s40774312",
-      "name": "Nota 407743"
+      "id": "ad9baabb-acd2-4645-9497-7d9b7eab6175",
+      "name": "Nota Setup"
     },
     {
       "parameters": {
-        "content": "## Sobre a pausa da Isis\n\nA pausa acontece quando a tool encaminhamento é chamada (fim da qualificação), igual no WhatsApp.\n\nNão pausamos por 'assignee' no Chatwoot: inboxes com auto atribuição definem um responsável assim que a conversa nasce, o que pausaria a Isis antes dela responder o oi. Se quiser pausa por handoff manual também, desative a auto atribuição na inbox do widget.",
-        "height": 260,
+        "content": "## Debounce de 8s\n\nAgrupa mensagens digitadas em sequencia. O fluxo do WhatsApp usa 60s, mas no chat do site o visitante espera resposta rapida.\n\nSo a execucao que carrega a ultima mensagem da fila segue adiante; as anteriores param em 'Ainda Digitando'.",
+        "height": 220,
+        "width": 360,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1248,
+        560
+      ],
+      "id": "cd24f254-28e8-48aa-a088-d767ba01c144",
+      "name": "Nota Debounce"
+    },
+    {
+      "parameters": {
+        "content": "## Pausa da Isis\n\nAcontece quando a tool encaminhamento e chamada, no fim da qualificacao.\n\nNao pausamos por 'assignee': inboxes com auto atribuicao ja nascem com responsavel, o que travaria a Isis antes do primeiro oi.",
+        "height": 200,
         "width": 340,
         "color": 4
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -816,
-        -480
+        624,
+        40
       ],
-      "id": "s76487813",
-      "name": "Nota 764878"
-    },
-    {
-      "parameters": {
-        "content": "## Debounce\n\nEspera 8s para agrupar mensagens digitadas em sequência, como o fluxo do WhatsApp faz com 60s. No chat de site o usuário espera resposta rápida, por isso o tempo é bem menor.",
-        "height": 160,
-        "width": 340,
-        "color": 3
-      },
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        0,
-        160
-      ],
-      "id": "s27485102",
-      "name": "Nota 274851"
+      "id": "1bfe8fa9-b275-4343-93ae-a42834362d28",
+      "name": "Nota Pausa"
     }
   ],
   "connections": {
@@ -537,7 +526,13 @@
             "node": "Config Site",
             "type": "main",
             "index": 0
-          },
+          }
+        ]
+      ]
+    },
+    "Config Site": {
+      "main": [
+        [
           {
             "node": "Extrai Dados",
             "type": "main",
@@ -547,17 +542,6 @@
       ]
     },
     "Extrai Dados": {
-      "main": [
-        [
-          {
-            "node": "Switch Evento",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Switch Evento": {
       "main": [
         [
           {
@@ -577,7 +561,13 @@
             "index": 0
           }
         ],
-        []
+        [
+          {
+            "node": "Ignora (eco do bot, nota ou outra inbox)",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Verifica Pausa": {
@@ -694,9 +684,212 @@
       ]
     }
   },
-  "active": false,
+  "pinData": {
+    "Webhook Chatwoot": [
+      {
+        "json": {
+          "headers": {
+            "host": "im-n8n.dskq5i.easypanel.host",
+            "user-agent": "Ruby",
+            "content-length": "3202",
+            "accept": "application/json",
+            "accept-encoding": "gzip;q=1.0,deflate;q=0.6,identity;q=0.3",
+            "content-type": "application/json",
+            "x-chatwoot-delivery": "09010ed8-dce2-4bf6-a0bc-5489efdb5497",
+            "x-chatwoot-signature": "sha256=a824ee65e66322fae370fd2b82fdbfa8a257067abc57e72f182ff2948aaf8b6d",
+            "x-chatwoot-timestamp": "1785939589",
+            "x-forwarded-for": "172.18.0.1",
+            "x-forwarded-host": "im-n8n.dskq5i.easypanel.host",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-server": "1144e0e7ae38",
+            "x-real-ip": "172.18.0.1"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "account": {
+              "id": 2,
+              "name": "Agencia Immerse"
+            },
+            "additional_attributes": {},
+            "content_attributes": {
+              "in_reply_to": null
+            },
+            "content_type": "text",
+            "content": "Bom dia",
+            "conversation": {
+              "additional_attributes": {
+                "browser": {
+                  "device_name": "Unknown",
+                  "browser_name": "Chrome",
+                  "platform_name": "Windows",
+                  "browser_version": "151.0.0.0",
+                  "platform_version": "10.0"
+                },
+                "referer": "https://imobi-ia.lovable.app/",
+                "initiated_at": {
+                  "timestamp": "Wed Aug 05 2026 10:06:03 GMT-0300 (Horário Padrão de Brasília)"
+                },
+                "browser_language": "pt"
+              },
+              "can_reply": true,
+              "channel": "Channel::WebWidget",
+              "contact_inbox": {
+                "id": 5,
+                "contact_id": 4,
+                "inbox_id": 2,
+                "source_id": "be4e654e-6949-4cff-a6dc-16ea26aa3ae7",
+                "created_at": "2026-08-05T13:05:46.835Z",
+                "updated_at": "2026-08-05T13:05:46.835Z",
+                "hmac_verified": false,
+                "pubsub_token": "9hFELBuHYDZTgZcoBMqY2dGp"
+              },
+              "id": 2,
+              "inbox_id": 2,
+              "messages": [
+                {
+                  "id": 12,
+                  "content": "Bom dia",
+                  "account_id": 2,
+                  "inbox_id": 2,
+                  "conversation_id": 2,
+                  "message_type": 0,
+                  "created_at": 1785939588,
+                  "updated_at": "2026-08-05T14:19:48.844Z",
+                  "private": false,
+                  "status": "sent",
+                  "source_id": null,
+                  "content_type": "text",
+                  "content_attributes": {
+                    "in_reply_to": null
+                  },
+                  "sender_type": "Contact",
+                  "sender_id": 4,
+                  "external_source_ids": {},
+                  "additional_attributes": {},
+                  "processed_message_content": "Bom dia",
+                  "sentiment": {},
+                  "conversation": {
+                    "assignee_id": 2,
+                    "unread_count": 1,
+                    "last_activity_at": 1785939588,
+                    "contact_inbox": {
+                      "source_id": "be4e654e-6949-4cff-a6dc-16ea26aa3ae7"
+                    }
+                  },
+                  "sender": {
+                    "additional_attributes": {
+                      "avatar_url_hash": "def1a523a7ad63313de7bce89751ea35dfcb90fd4eae7ec1f2fcda3b68916392",
+                      "last_avatar_sync_at": "2026-08-05T13:06:46Z"
+                    },
+                    "custom_attributes": {},
+                    "email": "cris@assessoriaimmerse.com.br",
+                    "id": 4,
+                    "identifier": null,
+                    "name": "cris",
+                    "phone_number": null,
+                    "thumbnail": "",
+                    "blocked": false,
+                    "type": "contact"
+                  }
+                }
+              ],
+              "labels": [],
+              "meta": {
+                "sender": {
+                  "additional_attributes": {
+                    "avatar_url_hash": "def1a523a7ad63313de7bce89751ea35dfcb90fd4eae7ec1f2fcda3b68916392",
+                    "last_avatar_sync_at": "2026-08-05T13:06:46Z"
+                  },
+                  "custom_attributes": {},
+                  "email": "cris@assessoriaimmerse.com.br",
+                  "id": 4,
+                  "identifier": null,
+                  "name": "cris",
+                  "phone_number": null,
+                  "thumbnail": "",
+                  "blocked": false,
+                  "type": "contact"
+                },
+                "assignee": {
+                  "id": 2,
+                  "name": "Immerse",
+                  "available_name": "Immerse",
+                  "avatar_url": "",
+                  "type": "user",
+                  "availability_status": null,
+                  "thumbnail": ""
+                },
+                "assignee_type": "User",
+                "team": null,
+                "hmac_verified": false
+              },
+              "status": "open",
+              "custom_attributes": {},
+              "snoozed_until": null,
+              "unread_count": 1,
+              "first_reply_created_at": null,
+              "priority": null,
+              "waiting_since": 1785935163,
+              "agent_last_seen_at": 1785939148,
+              "contact_last_seen_at": 1785939148,
+              "last_activity_at": 1785939588,
+              "timestamp": 1785939588,
+              "created_at": 1785935163,
+              "updated_at": 1785939588.931722,
+              "account": {
+                "id": 2,
+                "name": "Agencia Immerse"
+              }
+            },
+            "created_at": "2026-08-05T14:19:48.844Z",
+            "id": 12,
+            "inbox": {
+              "id": 2,
+              "name": "Immerse Imobi"
+            },
+            "message_type": "incoming",
+            "private": false,
+            "sender": {
+              "account": {
+                "id": 2,
+                "name": "Agencia Immerse"
+              },
+              "additional_attributes": {
+                "avatar_url_hash": "def1a523a7ad63313de7bce89751ea35dfcb90fd4eae7ec1f2fcda3b68916392",
+                "last_avatar_sync_at": "2026-08-05T13:06:46Z"
+              },
+              "avatar": "",
+              "custom_attributes": {},
+              "email": "cris@assessoriaimmerse.com.br",
+              "id": 4,
+              "identifier": null,
+              "name": "cris",
+              "phone_number": null,
+              "thumbnail": "",
+              "blocked": false
+            },
+            "source_id": null,
+            "event": "message_created"
+          },
+          "webhookUrl": "https://im-n8n.dskq5i.easypanel.host/webhook/chatwoot-site",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "active": true,
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "id": "9zcCejCbLK1iQbVd",
+  "meta": {
+    "instanceId": "65f28bdde4bf3256ad07e21a169631c2a0d6fb507d9055c9e128012686bceb92"
   },
   "tags": []
 }

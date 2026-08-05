@@ -56,7 +56,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// le direto do webhook pelo nome: nao depende de qual node roda antes\nconst b = $('Webhook Chatwoot').first().json.body || {};\nconst conv = b.conversation || {};\nconst sender = b.sender || {};\n\nreturn [{\n  json: {\n    event: b.event || '',\n    message_type: b.message_type || '',\n    private: b.private === true,\n    conteudo: (b.content || '').trim(),\n    conversation_id: String(conv.id || ''),\n    inbox_id: String(conv.inbox_id || (b.inbox && b.inbox.id) || ''),\n    nome: sender.name || sender.email || 'Visitante do site',\n    telefone: String(sender.phone_number || '').replace(/\\D/g, ''),\n    email: sender.email || '',\n  },\n}];\n"
+        "jsCode": "// O body pode chegar de duas formas: pelo proprio item (Config Site preserva os\n// campos de entrada) ou direto do node do webhook. Tentamos as duas, para nao\n// depender do nome exato do node nem da ordem em que ele aparece no canvas.\nlet b = $json.body;\nif (!b) {\n  try { b = $('Webhook Chatwoot').first().json.body; } catch (e) { b = null; }\n}\nif (!b || !b.event) {\n  throw new Error(\n    'Payload do Chatwoot nao encontrado. Confira: (1) o node Config Site precisa estar ' +\n    'com \"Include Other Input Fields\" ligado; (2) a ordem deve ser Webhook > Config Site ' +\n    '> Extrai Dados; (3) o node do webhook deve se chamar \"Webhook Chatwoot\".'\n  );\n}\n\nconst conv = b.conversation || {};\nconst sender = b.sender || {};\n\nreturn [{\n  json: {\n    event: b.event || '',\n    message_type: b.message_type || '',\n    private: b.private === true,\n    conteudo: (b.content || '').trim(),\n    conversation_id: String(conv.id || ''),\n    inbox_id: String(conv.inbox_id || (b.inbox && b.inbox.id) || ''),\n    nome: sender.name || sender.email || 'Visitante do site',\n    telefone: String(sender.phone_number || '').replace(/\\D/g, ''),\n    email: sender.email || '',\n  },\n}];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -152,7 +152,7 @@
       "parameters": {
         "operation": "get",
         "propertyName": "bloqueado",
-        "key": "=site_{{ $json.conversation_id }}_block",
+        "key": "=site_{{ $('Extrai Dados').first().json.conversation_id }}_block",
         "options": {}
       },
       "type": "n8n-nodes-base.redis",
@@ -219,8 +219,8 @@
     {
       "parameters": {
         "operation": "push",
-        "list": "=site_{{ $json.conversation_id }}",
-        "messageData": "={{ $json.conteudo }}",
+        "list": "=site_{{ $('Extrai Dados').first().json.conversation_id }}",
+        "messageData": "={{ $('Extrai Dados').first().json.conteudo }}",
         "tail": true
       },
       "type": "n8n-nodes-base.redis",
@@ -516,6 +516,22 @@
       ],
       "id": "1bfe8fa9-b275-4343-93ae-a42834362d28",
       "name": "Nota Pausa"
+    },
+    {
+      "parameters": {
+        "content": "## Cuidado com o Redis `get`\n\nO node Redis na operacao **get** NAO repassa os campos de entrada: ele devolve um item novo contendo so a propriedade pedida (`bloqueado`, `fila`).\n\nPor isso todo node depois de `Verifica Pausa` ou `Le Lista de Mensagens` que precise dos dados do lead deve usar `$('Extrai Dados').first().json.<campo>`, e nunca `$json.<campo>`.",
+        "height": 260,
+        "width": 380,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        832,
+        40
+      ],
+      "id": "nota-redis-get",
+      "name": "Nota Redis Get"
     }
   ],
   "connections": {

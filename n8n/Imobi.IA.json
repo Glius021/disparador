@@ -157,7 +157,9 @@
             }
           ]
         },
-        "options": {}
+        "options": {
+          "includeOtherFields": true
+        }
       },
       "id": "6880cde6-07e7-4d61-9f5a-26d3d2368e3c",
       "name": "Edit Fields1",
@@ -218,7 +220,9 @@
             }
           ]
         },
-        "options": {}
+        "options": {
+          "includeOtherFields": true
+        }
       },
       "id": "4dfcb24c-bddb-4d8f-b44d-da86f93358ff",
       "name": "Edit Fields",
@@ -259,7 +263,9 @@
             }
           ]
         },
-        "options": {}
+        "options": {
+          "includeOtherFields": true
+        }
       },
       "id": "b5ad5276-0afb-42f2-b0f1-9826f3b46b8c",
       "name": "Edit Fields3",
@@ -382,7 +388,9 @@
             }
           ]
         },
-        "options": {}
+        "options": {
+          "includeOtherFields": true
+        }
       },
       "id": "3ce8b987-6742-436e-9353-d72f9daccb8d",
       "name": "Edit Fields4",
@@ -1007,7 +1015,9 @@
             }
           ]
         },
-        "options": {}
+        "options": {
+          "includeOtherFields": true
+        }
       },
       "id": "42ae3cb5-8da4-4b94-899b-e38687fe9c04",
       "name": "dados",
@@ -1066,7 +1076,9 @@
             }
           ]
         },
-        "options": {}
+        "options": {
+          "includeOtherFields": true
+        }
       },
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
@@ -1766,7 +1778,9 @@
             }
           ]
         },
-        "options": {}
+        "options": {
+          "includeOtherFields": true
+        }
       },
       "id": "8b4adf85-d733-4f47-b602-73313b87180a",
       "name": "dados_para_atendimento_humano1",

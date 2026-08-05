@@ -148,7 +148,9 @@
             }
           ]
         },
-        "options": {}
+        "options": {
+          "includeOtherFields": true
+        }
       },
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
@@ -650,7 +652,9 @@
             }
           ]
         },
-        "options": {}
+        "options": {
+          "includeOtherFields": false
+        }
       },
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,

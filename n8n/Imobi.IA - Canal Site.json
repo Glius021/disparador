@@ -5,7 +5,8 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "chatwoot-site",
-        "options": {}
+        "options": {},
+        "responseMode": "onReceived"
       },
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
@@ -91,37 +92,6 @@
               },
               "renameOutput": true,
               "outputKey": "mensagem"
-            },
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": true,
-                  "leftValue": "",
-                  "typeValidation": "loose",
-                  "version": 1
-                },
-                "conditions": [
-                  {
-                    "leftValue": "={{ $json.event }}",
-                    "rightValue": "conversation_updated",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    }
-                  },
-                  {
-                    "leftValue": "={{ $json.assignee_id }}",
-                    "rightValue": "",
-                    "operator": {
-                      "type": "string",
-                      "operation": "notEmpty"
-                    }
-                  }
-                ],
-                "combinator": "and"
-              },
-              "renameOutput": true,
-              "outputKey": "corretor_assumiu"
             }
           ]
         },
@@ -510,31 +480,6 @@
     },
     {
       "parameters": {
-        "operation": "set",
-        "key": "=site_{{ $json.conversation_id }}_block",
-        "value": "true",
-        "keyType": "string",
-        "expire": true,
-        "ttl": 86400
-      },
-      "type": "n8n-nodes-base.redis",
-      "typeVersion": 1,
-      "position": [
-        -608,
-        -320
-      ],
-      "id": "pausa-por-corretor",
-      "name": "Pausa: Corretor Assumiu",
-      "credentials": {
-        "redis": {
-          "id": "Dr2yUkSVjsLZcCVx",
-          "name": "Prospec"
-        }
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
         "content": "## Canal Site\n\nEscuta o webhook do Chatwoot (mensagens do widget do site).\n\nConfigure em Config Site: chatwoot_url, account_id, inbox_id.\n\nNo Chatwoot: Settings > Integrations > Webhooks, aponte para a URL deste webhook, eventos message_created e conversation_updated.",
         "height": 260,
         "width": 420,
@@ -551,8 +496,8 @@
     },
     {
       "parameters": {
-        "content": "## Pausa automática\n\nSe um corretor humano é atribuído à conversa no Chatwoot, a Isis para de responder por 24h (mesma regra do encaminhamento).",
-        "height": 200,
+        "content": "## Sobre a pausa da Isis\n\nA pausa acontece quando a tool encaminhamento é chamada (fim da qualificação), igual no WhatsApp.\n\nNão pausamos por 'assignee' no Chatwoot: inboxes com auto atribuição definem um responsável assim que a conversa nasce, o que pausaria a Isis antes dela responder o oi. Se quiser pausa por handoff manual também, desative a auto atribuição na inbox do widget.",
+        "height": 260,
         "width": 340,
         "color": 4
       },
@@ -621,13 +566,6 @@
         [
           {
             "node": "É Mensagem do Lead?",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Pausa: Corretor Assumiu",
             "type": "main",
             "index": 0
           }

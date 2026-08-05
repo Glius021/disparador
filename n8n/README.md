@@ -158,10 +158,24 @@ Quando a Isis chama a tool `encaminhamento`, o sub-workflow:
 A chave de pausa no Redis muda por canal: no WhatsApp é `<remoteJid>_block` (mesma que o
 fluxo já usava); no site é `site_<conversation_id>_block`, porque não existe remoteJid.
 
-A pausa **não** é disparada por atribuição de corretor no Chatwoot. Inboxes com auto
-atribuição já nascem com um responsável definido, então isso travaria a Isis antes dela
-responder a primeira mensagem. Se quiser que assumir a conversa manualmente também cale
-a Isis, desative a auto atribuição na inbox do widget e me avise que eu religo essa regra.
+### Quando o corretor assume a conversa
+
+A Isis para de responder por 24h assim que **alguém envia uma mensagem pelo Chatwoot**.
+Cada nova mensagem do corretor renova o prazo.
+
+Para saber se a mensagem partiu dela ou de um humano, a Isis assina as próprias respostas
+com `content_attributes.isis_bot`. As duas chegam no webhook como `message_type: outgoing`,
+então sem essa assinatura não haveria como distinguir — ela se calaria ao ouvir o próprio
+eco. Se a sua versão do Chatwoot não devolver `content_attributes` no webhook, preencha
+`bot_agent_id` no **Config Site** com o ID do usuário dono do token que o n8n usa.
+
+A pausa **não** é disparada por atribuição de corretor. Inboxes com auto atribuição já
+nascem com um responsável definido, então isso travaria a Isis antes da primeira resposta.
+O gatilho é a mensagem, não a atribuição.
+
+No WhatsApp o equivalente já existia (`PARAR ISIS1`, disparado por mensagem `fromMe`), mas
+estava sem TTL definido — o n8n aplicava o padrão de 60 segundos, o que dava ao corretor
+apenas um minuto de silêncio. Agora são 24h, igual ao site.
 
 O resumo chega assim:
 

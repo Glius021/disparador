@@ -1797,7 +1797,8 @@
         "key": "={{ $json.message.chat_id }}_block",
         "value": "true",
         "keyType": "string",
-        "expire": true
+        "expire": true,
+        "ttl": 86400
       },
       "id": "6b1790b9-2a6b-421d-aa54-370a6e3f27e1",
       "name": "PARAR ISIS1",

@@ -1,0 +1,362 @@
+{
+  "name": "Imobi.IA - Relatorios",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "relatorios",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -1600,
+        0
+      ],
+      "id": "webhook-relatorios",
+      "name": "Webhook (manual)"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c1",
+              "name": "chatwoot_url",
+              "value": "https://im-chatwoot.dskq5i.easypanel.host",
+              "type": "string"
+            },
+            {
+              "id": "c2",
+              "name": "account_id",
+              "value": "2",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1408,
+        0
+      ],
+      "id": "config-relatorios",
+      "name": "Config"
+    },
+    {
+      "parameters": {
+        "resource": "database",
+        "operation": "executeQuery",
+        "query": "delete from relatorios_leads where updated_at < now() - interval '90 days'; select now();"
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        -1216,
+        0
+      ],
+      "id": "limpa-antigos",
+      "name": "Limpa Registros Antigos",
+      "credentials": {
+        "postgresdb": {
+          "id": "SUPABASE_PG",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const cfg = $('Config').first().json;\nconst url = cfg.chatwoot_url + '/api/v1/accounts/' + cfg.account_id + '/conversations?status=open,resolved,snoozed&sort=-updated_at&per_page=100';\nreturn { url };\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1024,
+        0
+      ],
+      "id": "loop-conversas",
+      "name": "Loop Conversas"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.url }}&access_token={{ $env.CHATWOOT_TOKEN }}",
+        "authentication": "none",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -816,
+        0
+      ],
+      "id": "puxa-conversas",
+      "name": "Puxa Conversas"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "conversations",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        -608,
+        0
+      ],
+      "id": "split-conversas",
+      "name": "Split Conversas"
+    },
+    {
+      "parameters": {
+        "jsCode": "const c = $json.conversation || {};\nconst contact = c.contact || {};\nconst assignee = c.assignee || {};\nreturn [{\n  json: {\n    conversation_id: String(c.id || ''),\n    contact_id: contact.id || '',\n    contact_name: contact.name || '',\n    contact_email: contact.email || '',\n    contact_phone: (contact.phone_number || '').replace(/\\D/g, ''),\n    inbox_id: String(c.inbox_id || ''),\n    status: c.status || 'open',\n    assignee_id: assignee.id || '',\n    assignee_name: assignee.name || '',\n    labels: (c.labels || []).map(l => l.title || l),\n    created_at: c.created_at,\n    updated_at: c.updated_at,\n    messages_count: c.messages_count || 0,\n    unread_count: c.unread_count || 0,\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        0
+      ],
+      "id": "extrai-conversa",
+      "name": "Extrai Conversa"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('Config').first().json.chatwoot_url }}/api/v1/accounts/{{ $('Config').first().json.account_id }}/conversations/{{ $json.conversation_id }}/messages?access_token={{ $env.CHATWOOT_TOKEN }}",
+        "authentication": "none",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -192,
+        0
+      ],
+      "id": "le-mensagens",
+      "name": "Lê Mensagens",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "resource": "database",
+        "operation": "executeQuery",
+        "queryParams": "auto"
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "busca-lead",
+      "name": "Busca Lead",
+      "credentials": {
+        "postgresdb": {
+          "id": "SUPABASE_PG",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const c = $('Extrai Conversa').first().json;\nconst lead = $('Busca Lead').first()?.json;\nconst msgs = $('Le Mensagens').first()?.json?.messages || [];\n\n// timestamps\nconst created = new Date(c.created_at);\nconst updated = new Date(c.updated_at);\nconst agora = new Date();\nconst dias = Math.floor((agora - updated) / (1000*60*60*24));\n\n// primeira resposta do corretor (message_type = outgoing)\nlet primeira_resposta = null;\nlet msgs_lead = 0, msgs_corretor = 0;\nfor (const m of msgs) {\n  if (m.message_type === 'incoming') msgs_lead++;\n  else msgs_corretor++;\n  if (m.message_type === 'outgoing' && !primeira_resposta) primeira_resposta = m.created_at;\n}\n\n// tempo de resposta em segundos\nlet tempo_resposta_s = null;\nif (primeira_resposta) {\n  const pr = new Date(primeira_resposta);\n  tempo_resposta_s = Math.floor((pr - created) / 1000);\n}\n\n// score (0-100): urgencia + qualificacao + tempo resposta\nlet score = 50;  // baseline\nif (lead) {\n  if (lead.urgencia?.includes('imediato')) score += 20;\n  else if (lead.urgencia?.includes('30')) score += 10;\n  score += Math.min(lead.campos_preenchidos * 2, 20);  // max +20\n}\nif (tempo_resposta_s && tempo_resposta_s < 300) score += 10;  // respondeu rapido\nif (msgs_lead >= 5) score += 5;  // lead engajado\nscore = Math.min(Math.max(score, 0), 100);\n\nreturn [{\n  json: {\n    dias_em_aberto: dias,\n    tempo_resposta_s,\n    primeira_resposta,\n    mensagens_lead: msgs_lead,\n    mensagens_corretor: msgs_corretor,\n    score: Math.round(score),\n    lead_id: lead?.id,\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        192,
+        0
+      ],
+      "id": "calcula-metricas",
+      "name": "Calcula Métricas"
+    },
+    {
+      "parameters": {
+        "jsCode": "const c = $('Extrai Conversa').first().json;\nconst lead = $('Busca Lead').first()?.json;\nconst m = $('Calcula Metricas').first().json;\n\nreturn [{\n  json: {\n    conversation_id: c.conversation_id,\n    contact_id: c.contact_id,\n    inbox_id: c.inbox_id,\n    nome: c.contact_name || lead?.nome,\n    telefone: c.contact_phone || lead?.telefone,\n    email: c.contact_email,\n    canal: lead?.canal || 'desconhecido',\n    tipo_imovel: lead?.tipo_imovel,\n    regiao: lead?.regiao,\n    faixa_valor: lead?.faixa_valor,\n    finalidade: lead?.finalidade,\n    urgencia: lead?.urgencia,\n    campos_preenchidos: lead?.campos_preenchidos,\n    status: c.status,\n    corretor_id: c.assignee_id,\n    corretor_nome: c.assignee_name,\n    etiquetas: c.labels,\n    primeira_mensagem: c.created_at,\n    ultima_mensagem: c.updated_at,\n    dias_em_aberto: m.dias_em_aberto,\n    tempo_resposta_s: m.tempo_resposta_s,\n    primeira_resposta: m.primeira_resposta,\n    mensagens_lead: m.mensagens_lead,\n    mensagens_corretor: m.mensagens_corretor,\n    score: m.score,\n    lead_id: m.lead_id,\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        384,
+        0
+      ],
+      "id": "monta-linha",
+      "name": "Monta Linha"
+    },
+    {
+      "parameters": {
+        "resource": "database",
+        "operation": "upsert",
+        "schema": "public",
+        "table": "relatorios_leads",
+        "updateKey": [
+          "conversation_id",
+          "canal"
+        ],
+        "columns": "conversation_id,contact_id,inbox_id,nome,telefone,email,canal,tipo_imovel,regiao,faixa_valor,finalidade,urgencia,campos_preenchidos,status,corretor_id,corretor_nome,etiquetas,primeira_mensagem,ultima_mensagem,primeira_resposta,tempo_resposta_s,dias_em_aberto,mensagens_lead,mensagens_corretor,score,lead_id,updated_at"
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        576,
+        0
+      ],
+      "id": "upsert-relatorios",
+      "name": "Upsert Relatorios",
+      "credentials": {
+        "postgresdb": {
+          "id": "SUPABASE_PG",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Sincronizacao Chatwoot → Relatorios\n\nA cada 30min, puxa todas as conversas abertas/resolvidas do Chatwoot, linka com leads_qualificados, calcula metricas e atualiza a tabela relatorios_leads.\n\nVar env: `CHATWOOT_TOKEN` (seu api_access_token do Chatwoot)",
+        "height": 260,
+        "width": 360,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1616,
+        -320
+      ],
+      "id": "sticky",
+      "name": "Sticky"
+    }
+  ],
+  "connections": {
+    "Webhook (manual)": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Limpa Registros Antigos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limpa Registros Antigos": {
+      "main": [
+        [
+          {
+            "node": "Loop Conversas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Conversas": {
+      "main": [
+        [
+          {
+            "node": "Puxa Conversas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Puxa Conversas": {
+      "main": [
+        [
+          {
+            "node": "Split Conversas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Conversas": {
+      "main": [
+        [
+          {
+            "node": "Extrai Conversa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extrai Conversa": {
+      "main": [
+        [
+          {
+            "node": "Lê Mensagens",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lê Mensagens": {
+      "main": [
+        [
+          {
+            "node": "Busca Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Busca Lead": {
+      "main": [
+        [
+          {
+            "node": "Calcula Métricas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calcula Métricas": {
+      "main": [
+        [
+          {
+            "node": "Monta Linha",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Monta Linha": {
+      "main": [
+        [
+          {
+            "node": "Upsert Relatorios",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}

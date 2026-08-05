@@ -1162,8 +1162,8 @@
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
       "position": [
-        1104,
-        592
+        1472,
+        720
       ],
       "webhookId": "e601af4c-a590-4cf0-8fe3-ab3a9c3497f0"
     },
@@ -1794,7 +1794,7 @@
     {
       "parameters": {
         "operation": "set",
-        "key": "={{ $json.message.chat_id }}_block",
+        "key": "={{ $('dados_para_atendimento_humano1').first().json.message.chat_id }}_block",
         "value": "true",
         "keyType": "string",
         "expire": true,
@@ -1805,8 +1805,8 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        -4944,
-        1232
+        -4608,
+        1296
       ],
       "credentials": {
         "redis": {
@@ -2207,7 +2207,7 @@
         "resource": "messages-api",
         "instanceName": "tim",
         "remoteJid": "={{ $('dados').first().json.telefone.replace('@s.whatsapp.net', '') }}",
-        "messageText": "={{ $json.output }}",
+        "messageText": "={{ $json.output || $('Loop Over Items3').first().json.output }}",
         "options_message": {
           "delay": 1200,
           "linkPreview": false
@@ -2216,8 +2216,8 @@
       "type": "n8n-nodes-evolution-api.evolutionApi",
       "typeVersion": 1,
       "position": [
-        928,
-        592
+        1296,
+        816
       ],
       "id": "d42cb0d3-eb56-41a3-8ef5-f678fa70bcb5",
       "name": "Evolution API1",
@@ -2489,6 +2489,173 @@
       ],
       "id": "sticky-chama-cerebro-wa",
       "name": "Sticky Chama Cerebro WA"
+    },
+    {
+      "parameters": {
+        "operation": "set",
+        "key": "=isis_msg_{{ $json.key?.id || $json.messageId || $json.id || 'sem-id' }}",
+        "value": "1",
+        "keyType": "string",
+        "expire": true,
+        "ttl": 900
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        1472,
+        928
+      ],
+      "id": "marca-msg-isis",
+      "name": "Marca Msg da Isis",
+      "credentials": {
+        "redis": {
+          "id": "Dr2yUkSVjsLZcCVx",
+          "name": "Prospec"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "propertyName": "eco",
+        "key": "=isis_msg_{{ $('Webhook EVO').first().json.body.data.key.id }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        -4992,
+        1200
+      ],
+      "id": "eco-da-isis",
+      "name": "Eco da Isis?",
+      "credentials": {
+        "redis": {
+          "id": "Dr2yUkSVjsLZcCVx",
+          "name": "Prospec"
+        }
+      },
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "x1",
+              "leftValue": "={{ $json.eco }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -4800,
+        1200
+      ],
+      "id": "foi-a-propria-isis",
+      "name": "Foi a Propria Isis?"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -4608,
+        1104
+      ],
+      "id": "ignora-eco-isis",
+      "name": "Ignora (eco da propria Isis)"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "propertyName": "bloqueado",
+        "key": "={{ $('dados').first().json.telefone }}_block",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        928,
+        736
+      ],
+      "id": "corretor-assumiu-zap",
+      "name": "Corretor Assumiu?",
+      "credentials": {
+        "redis": {
+          "id": "Dr2yUkSVjsLZcCVx",
+          "name": "Prospec"
+        }
+      },
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b1",
+              "leftValue": "={{ $json.bloqueado }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1104,
+        736
+      ],
+      "id": "isis-bloqueada-zap",
+      "name": "Isis Bloqueada?"
+    },
+    {
+      "parameters": {
+        "content": "## Corretor assumiu = Isis calada\n\n**Eco da Isis?** — a Evolution reemite como `fromMe` tudo que sai pela instancia, inclusive o que a propria Isis mandou. Sem essa conferencia ela se calaria sozinha ao ouvir o proprio eco.\n\n**Corretor Assumiu?** — roda antes de cada mensagem do loop. Entre o debounce de 60s e a resposta do LLM da tempo do corretor responder, e sem isso a Isis falaria por cima dele.",
+        "height": 320,
+        "width": 400,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        864,
+        976
+      ],
+      "id": "nota-pausa-zap",
+      "name": "Nota Pausa WhatsApp"
     }
   ],
   "connections": {
@@ -2908,7 +3075,7 @@
       "main": [
         [
           {
-            "node": "PARAR ISIS1",
+            "node": "Eco da Isis?",
             "type": "main",
             "index": 0
           }
@@ -3049,7 +3216,7 @@
         [],
         [
           {
-            "node": "Evolution API1",
+            "node": "Corretor Assumiu?",
             "type": "main",
             "index": 0
           }
@@ -3061,6 +3228,11 @@
         [
           {
             "node": "1 segundo",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Marca Msg da Isis",
             "type": "main",
             "index": 0
           }
@@ -3101,6 +3273,64 @@
         [],
         [],
         []
+      ]
+    },
+    "Eco da Isis?": {
+      "main": [
+        [
+          {
+            "node": "Foi a Propria Isis?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Foi a Propria Isis?": {
+      "main": [
+        [
+          {
+            "node": "Ignora (eco da propria Isis)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "PARAR ISIS1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Corretor Assumiu?": {
+      "main": [
+        [
+          {
+            "node": "Isis Bloqueada?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Isis Bloqueada?": {
+      "main": [
+        [
+          {
+            "node": "1 segundo",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Evolution API1",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },

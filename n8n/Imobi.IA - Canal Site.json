@@ -452,14 +452,14 @@
         "nodeCredentialType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ content: $json.output, message_type: 'outgoing', private: false, content_attributes: { isis_bot: true } }) }}",
+        "jsonBody": "={{ JSON.stringify({ content: $('Chama Cérebro').first().json.output, message_type: 'outgoing', private: false, content_attributes: { isis_bot: true } }) }}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        2496,
-        288
+        2880,
+        192
       ],
       "id": "3eb52cca-3e8d-4db2-b5c0-30cf9a17de4b",
       "name": "Responde no Chatwoot",
@@ -579,15 +579,6 @@
                 "type": "boolean",
                 "operation": "equals"
               }
-            },
-            {
-              "id": "k4",
-              "leftValue": "={{ $json.inbox_id }}",
-              "rightValue": "={{ $('Config Site').first().json.chatwoot_inbox_id }}",
-              "operator": {
-                "type": "string",
-                "operation": "equals"
-              }
             }
           ],
           "combinator": "and"
@@ -606,16 +597,16 @@
     {
       "parameters": {
         "operation": "set",
-        "key": "=site_{{ $('Extrai Dados').first().json.conversation_id }}_block",
+        "key": "={{ $json.chave }}",
         "value": "true",
         "keyType": "string",
         "expire": true,
-        "ttl": "={{ Number($('Config Site').first().json.pausa_corretor_segundos) }}"
+        "ttl": "={{ $json.ttl }}"
       },
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        832,
+        1040,
         656
       ],
       "id": "pausa-corretor",
@@ -641,8 +632,8 @@
     },
     {
       "parameters": {
-        "content": "## Corretor assume a conversa\n\nQuando alguem responde pelo Chatwoot, a Isis para de falar por 24h.\n\nPara saber se a mensagem foi da Isis ou de um humano, ela assina as proprias respostas com `content_attributes.isis_bot`. As duas chegam como `outgoing`, entao sem a assinatura nao haveria como distinguir.\n\nSe sua versao do Chatwoot nao devolver `content_attributes` no webhook, preencha `bot_agent_id` no Config Site com o ID do usuario dono do token usado pelo n8n.",
-        "height": 300,
+        "content": "## Corretor assume a conversa\n\nQualquer mensagem enviada por um humano pelo Chatwoot cala a Isis por 24h — em **qualquer inbox**, nao so a do site.\n\n`Chaves de Pausa` bloqueia a conversa do Chatwoot e, se o contato tiver telefone, tambem o WhatsApp dele. O corretor assumiu o lead, nao um canal.\n\nPara distinguir a resposta dela da de um humano (as duas chegam como `outgoing`), a Isis assina as proprias mensagens com `content_attributes.isis_bot`. Se o seu Chatwoot nao devolver esse campo no webhook, preencha `bot_agent_id` no Config Site.",
+        "height": 340,
         "width": 380,
         "color": 4
       },
@@ -654,6 +645,87 @@
       ],
       "id": "nota-pausa-corretor",
       "name": "Nota Pausa Corretor"
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $('Extrai Dados').first().json;\nconst cfg = $('Config Site').first().json;\nconst ttl = Number(cfg.pausa_corretor_segundos) || 86400;\n\n// O corretor assumiu o LEAD, nao um canal. Entao calamos a Isis em todo lugar\n// onde essa mesma pessoa consegue falar com ela.\n// Chatwoot e Evolution guardam o numero com DDI. Se o lead digitou so DDD +\n// numero, falta o 55 e a chave de pausa nao bateria com o remoteJid real.\nconst comDDI = (n) => (n.length === 10 || n.length === 11) ? '55' + n : n;\n\nconst chaves = [];\n\n// conversa do Chatwoot (widget do site) — mesma chave que o Verifica Pausa le\nif (d.conversation_id) chaves.push('site_' + d.conversation_id + '_block');\n\n// se o contato tem telefone, cala a Isis no WhatsApp tambem. A chave usa o\n// remoteJid completo, igual a que o fluxo do WhatsApp consulta.\nif (d.telefone) chaves.push(comDDI(d.telefone) + '@s.whatsapp.net_block');\n\nreturn chaves.map((chave) => ({ json: { chave, ttl } }));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        832,
+        656
+      ],
+      "id": "chaves-de-pausa",
+      "name": "Chaves de Pausa"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "propertyName": "bloqueado",
+        "key": "=site_{{ $('Extrai Dados').first().json.conversation_id }}_block",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        2496,
+        288
+      ],
+      "id": "reconfere-pausa",
+      "name": "Corretor Respondeu Enquanto Isso?",
+      "credentials": {
+        "redis": {
+          "id": "Dr2yUkSVjsLZcCVx",
+          "name": "Prospec"
+        }
+      },
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "r1",
+              "leftValue": "={{ $json.bloqueado }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2688,
+        288
+      ],
+      "id": "ainda-pode-responder",
+      "name": "Ainda Pode Responder?"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        2880,
+        416
+      ],
+      "id": "descarta-resposta",
+      "name": "Descarta (corretor respondeu antes)"
     }
   ],
   "connections": {
@@ -814,7 +886,7 @@
       "main": [
         [
           {
-            "node": "Responde no Chatwoot",
+            "node": "Corretor Respondeu Enquanto Isso?",
             "type": "main",
             "index": 0
           }
@@ -825,7 +897,7 @@
       "main": [
         [
           {
-            "node": "Pausa Isis (corretor assumiu)",
+            "node": "Chaves de Pausa",
             "type": "main",
             "index": 0
           }
@@ -833,6 +905,46 @@
         [
           {
             "node": "Ignora (eco da Isis ou evento irrelevante)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chaves de Pausa": {
+      "main": [
+        [
+          {
+            "node": "Pausa Isis (corretor assumiu)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Corretor Respondeu Enquanto Isso?": {
+      "main": [
+        [
+          {
+            "node": "Ainda Pode Responder?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ainda Pode Responder?": {
+      "main": [
+        [
+          {
+            "node": "Responde no Chatwoot",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Descarta (corretor respondeu antes)",
             "type": "main",
             "index": 0
           }

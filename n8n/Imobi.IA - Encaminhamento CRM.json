@@ -163,7 +163,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const d = $('Recebe Dados').first().json;\n\nconst nz = (v) => {\n  const s = (v === undefined || v === null) ? '' : String(v).trim();\n  const low = s.toLowerCase();\n  if (s === '' || low === 'undefined' || low === 'null' || low === 'n/a') return 'Não informado';\n  return s;\n};\n\nconst raw = String(d.telefone || '');\nconst digits = raw.replace(/\\D/g, '');\n// a chave de bloqueio da Isis usa o remoteJid completo, entao normalizamos aqui\nconst remote_jid = raw.includes('@') ? raw : digits + '@s.whatsapp.net';\n\n// no whatsapp a pausa usa o remoteJid (mesma chave que o fluxo principal ja usa).\n// no site nao existe remoteJid, entao a pausa usa a conversa do Chatwoot.\nconst canal = String(d.canal || 'whatsapp').toLowerCase();\nconst block_key = canal === 'site'\n  ? 'site_' + String(d.conversation_id || d.session_id) + '_block'\n  : remote_jid + '_block';\n\nconst nome = nz(d.nome);\n\nconst linhas = [\n  ['Nome', nome],\n  ['Telefone', nz(digits)],\n  ['Tipo de imóvel', nz(d.tipo_imovel)],\n  ['Região desejada', nz(d.regiao)],\n  ['Faixa de valor', nz(d.faixa_valor)],\n  ['Compra ou locação', nz(d.finalidade)],\n  ['Urgência', nz(d.urgencia)],\n  ['Financiamento', nz(d.financiamento)],\n  ['Nº de moradores', nz(d.moradores)],\n  ['Vaga de garagem', nz(d.garagem)],\n  ['Suíte', nz(d.suite)],\n  ['Aceita pets', nz(d.pets)],\n  ['Área de lazer', nz(d.area_lazer)],\n  ['Metragem mínima', nz(d.metragem_minima)],\n  ['Observações', nz(d.observacoes)],\n];\n\nconst resumo_texto = linhas.map(([k, v]) => k + ': ' + v).join('\\n');\n\n// as 12 perguntas de qualificacao ficam entre 'Tipo de imóvel' e 'Metragem mínima'\nconst preenchidos = linhas.slice(2, 14).filter(([, v]) => v !== 'Não informado').length;\n\nconst agora = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });\n\nconst mensagem_vendedor =\n  '🏠 *NOVO LEAD QUALIFICADO*\\n\\n' +\n  resumo_texto + '\\n\\n' +\n  '📊 Qualificação: ' + preenchidos + '/12 campos\\n' +\n  '🕒 ' + agora + '\\n' +\n  (digits\n    ? '💬 Falar com o lead: wa.me/' + digits\n    : '💬 Telefone não informado. Retome pela própria conversa do CRM.');\n\nconst nota_crm =\n  '🤖 *Pré-atendimento Isis — lead qualificado*\\n\\n' +\n  resumo_texto + '\\n\\n' +\n  'Qualificação: ' + preenchidos + '/12 campos preenchidos.';\n\nreturn [{\n  json: {\n    ...d,\n    canal,\n    block_key,\n    nome,\n    telefone_digits: digits,\n    telefone_e164: '+' + digits,\n    remote_jid,\n    resumo_texto,\n    resumo_agente: d.resumo || '',\n    campos_preenchidos: preenchidos,\n    mensagem_vendedor,\n    nota_crm,\n    data_hora: agora,\n  },\n}];\n"
+        "jsCode": "const d = $('Recebe Dados').first().json;\n\nconst nz = (v) => {\n  const s = (v === undefined || v === null) ? '' : String(v).trim();\n  const low = s.toLowerCase();\n  if (s === '' || low === 'undefined' || low === 'null' || low === 'n/a') return 'Não informado';\n  return s;\n};\n\nconst raw = String(d.telefone || '');\n// Chatwoot e Evolution guardam o numero com DDI. Se o lead digitou so DDD +\n// numero, falta o 55 e a chave de pausa nao bateria com o remoteJid real.\nconst comDDI = (n) => (n.length === 10 || n.length === 11) ? '55' + n : n;\nconst digits = comDDI(raw.replace(/\\D/g, ''));\n// a chave de bloqueio da Isis usa o remoteJid completo, entao normalizamos aqui\nconst remote_jid = raw.includes('@') ? raw : digits + '@s.whatsapp.net';\n\n// no whatsapp a pausa usa o remoteJid (mesma chave que o fluxo principal ja usa).\n// no site nao existe remoteJid, entao a pausa usa a conversa do Chatwoot.\nconst canal = String(d.canal || 'whatsapp').toLowerCase();\nconst site_key = 'site_' + String(d.conversation_id || d.session_id) + '_block';\nconst zap_key = remote_jid + '_block';\nconst block_key = canal === 'site' ? site_key : zap_key;\n\n// O corretor assumiu o lead, nao um canal. Se o lead do site informou o\n// WhatsApp, calamos a Isis la tambem — e vice-versa. Quando o outro canal nao\n// existe, repetimos a mesma chave: gravar duas vezes nao muda nada.\nconst block_key_alt = canal === 'site'\n  ? (digits ? zap_key : block_key)\n  : (d.conversation_id ? site_key : block_key);\n\nconst nome = nz(d.nome);\n\nconst linhas = [\n  ['Nome', nome],\n  ['Telefone', nz(digits)],\n  ['Tipo de imóvel', nz(d.tipo_imovel)],\n  ['Região desejada', nz(d.regiao)],\n  ['Faixa de valor', nz(d.faixa_valor)],\n  ['Compra ou locação', nz(d.finalidade)],\n  ['Urgência', nz(d.urgencia)],\n  ['Financiamento', nz(d.financiamento)],\n  ['Nº de moradores', nz(d.moradores)],\n  ['Vaga de garagem', nz(d.garagem)],\n  ['Suíte', nz(d.suite)],\n  ['Aceita pets', nz(d.pets)],\n  ['Área de lazer', nz(d.area_lazer)],\n  ['Metragem mínima', nz(d.metragem_minima)],\n  ['Observações', nz(d.observacoes)],\n];\n\nconst resumo_texto = linhas.map(([k, v]) => k + ': ' + v).join('\\n');\n\n// as 12 perguntas de qualificacao ficam entre 'Tipo de imóvel' e 'Metragem mínima'\nconst preenchidos = linhas.slice(2, 14).filter(([, v]) => v !== 'Não informado').length;\n\nconst agora = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });\n\nconst mensagem_vendedor =\n  '🏠 *NOVO LEAD QUALIFICADO*\\n\\n' +\n  resumo_texto + '\\n\\n' +\n  '📊 Qualificação: ' + preenchidos + '/12 campos\\n' +\n  '🕒 ' + agora + '\\n' +\n  (digits\n    ? '💬 Falar com o lead: wa.me/' + digits\n    : '💬 Telefone não informado. Retome pela própria conversa do CRM.');\n\nconst nota_crm =\n  '🤖 *Pré-atendimento Isis — lead qualificado*\\n\\n' +\n  resumo_texto + '\\n\\n' +\n  'Qualificação: ' + preenchidos + '/12 campos preenchidos.';\n\nreturn [{\n  json: {\n    ...d,\n    canal,\n    block_key,\n    block_key_alt,\n    nome,\n    telefone_digits: digits,\n    telefone_e164: '+' + digits,\n    remote_jid,\n    resumo_texto,\n    resumo_agente: d.resumo || '',\n    campos_preenchidos: preenchidos,\n    mensagem_vendedor,\n    nota_crm,\n    data_hora: agora,\n  },\n}];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -659,7 +659,7 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        2336,
+        2432,
         320
       ],
       "id": "retorno-isis",
@@ -680,6 +680,31 @@
       ],
       "id": "sticky-config",
       "name": "Sticky Config"
+    },
+    {
+      "parameters": {
+        "operation": "set",
+        "key": "={{ $('Monta Resumo').first().json.block_key_alt }}",
+        "value": "true",
+        "keyType": "string",
+        "expire": true,
+        "ttl": "={{ Number($('Config CRM').first().json.pausa_isis_segundos) }}"
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        2240,
+        480
+      ],
+      "id": "pausa-isis-outro-canal",
+      "name": "Pausa Isis (outro canal)",
+      "credentials": {
+        "redis": {
+          "id": "Dr2yUkSVjsLZcCVx",
+          "name": "Prospec"
+        }
+      },
+      "onError": "continueRegularOutput"
     }
   ],
   "connections": {
@@ -886,6 +911,17 @@
       ]
     },
     "Pausa Isis": {
+      "main": [
+        [
+          {
+            "node": "Pausa Isis (outro canal)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pausa Isis (outro canal)": {
       "main": [
         [
           {

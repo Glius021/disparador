@@ -138,6 +138,9 @@ Depois, no Chatwoot: Settings → Integrations → Webhooks → adicione a URL d
 node `Webhook Chatwoot` (`.../webhook/chatwoot-site`), marcando **apenas** o evento
 `message_created`.
 
+Esse webhook é da conta inteira, não de uma inbox. É proposital: é assim que a resposta de
+um corretor na inbox do **WhatsApp** também consegue calar a Isis.
+
 Por fim, cole em seu site o script que o Chatwoot te dá na tela de configuração da inbox
 (Settings → Inboxes → sua inbox → **Configuração do widget**). É um `<script>` para colar
 antes do `</body>`.
@@ -160,22 +163,61 @@ fluxo já usava); no site é `site_<conversation_id>_block`, porque não existe 
 
 ### Quando o corretor assume a conversa
 
-A Isis para de responder por 24h assim que **alguém envia uma mensagem pelo Chatwoot**.
-Cada nova mensagem do corretor renova o prazo.
+**Qualquer mensagem que um humano mande para o lead cala a Isis por 24h, em qualquer
+canal.** Cada nova mensagem do corretor renova o prazo. São três gatilhos, um para cada
+lugar de onde a resposta pode sair:
 
-Para saber se a mensagem partiu dela ou de um humano, a Isis assina as próprias respostas
-com `content_attributes.isis_bot`. As duas chegam no webhook como `message_type: outgoing`,
-então sem essa assinatura não haveria como distinguir — ela se calaria ao ouvir o próprio
-eco. Se a sua versão do Chatwoot não devolver `content_attributes` no webhook, preencha
-`bot_agent_id` no **Config Site** com o ID do usuário dono do token que o n8n usa.
+| Onde o corretor responde | Quem detecta |
+|---|---|
+| Chatwoot, inbox do site | `É Mensagem do Corretor?` (Canal Site) |
+| Chatwoot, inbox do WhatsApp | `É Mensagem do Corretor?` (Canal Site) |
+| Celular ou WhatsApp Web, direto | `Switch6` → `PARAR ISIS1` (Imobi.IA) |
+
+O webhook do Chatwoot é configurado na conta inteira, então ele entrega eventos de todas
+as inboxes — por isso o gatilho do Canal Site não filtra por inbox. Ele só filtra na hora
+de **responder**, aí sim apenas o widget do site.
+
+#### A pausa segue o lead, não o canal
+
+`Chaves de Pausa` bloqueia a conversa do Chatwoot **e**, se o contato tiver telefone, o
+WhatsApp dele também. Quem foi assumido foi a pessoa: se ela migrar do chat do site para o
+WhatsApp, a Isis continua calada. O encaminhamento faz o mesmo, pelo node
+`Pausa Isis (outro canal)`.
+
+Números sem DDI são normalizados (`21 97710-6822` → `5521977106822`) antes de virarem
+chave. Sem isso a chave não bateria com o `remoteJid` que a Evolution usa, e a pausa no
+WhatsApp seria gravada num lugar que ninguém lê.
+
+#### Distinguir a Isis de um humano
+
+No Chatwoot, a resposta dela e a do corretor chegam iguais: `message_type: outgoing`. A
+Isis assina as próprias mensagens com `content_attributes.isis_bot` — sem isso ela se
+calaria ao ouvir o próprio eco. Se a sua versão do Chatwoot não devolver
+`content_attributes` no webhook, preencha `bot_agent_id` no **Config Site** com o ID do
+usuário dono do token que o n8n usa.
+
+No WhatsApp o problema é o mesmo: a Evolution reemite como `fromMe` tudo que sai pela
+instância, inclusive o que a própria Isis mandou. `Marca Msg da Isis` guarda no Redis o id
+de cada mensagem enviada por ela (15 min), e `Eco da Isis?` consulta esse id quando o
+`fromMe` volta. Se bater, é eco dela e não pausa.
 
 A pausa **não** é disparada por atribuição de corretor. Inboxes com auto atribuição já
 nascem com um responsável definido, então isso travaria a Isis antes da primeira resposta.
 O gatilho é a mensagem, não a atribuição.
 
-No WhatsApp o equivalente já existia (`PARAR ISIS1`, disparado por mensagem `fromMe`), mas
-estava sem TTL definido — o n8n aplicava o padrão de 60 segundos, o que dava ao corretor
-apenas um minuto de silêncio. Agora são 24h, igual ao site.
+#### Pausa imediata, mesmo com resposta em andamento
+
+Só checar a pausa na entrada não bastava. Entre o debounce (60s no WhatsApp, 8s no site) e
+a resposta do LLM passam vários segundos — se o corretor respondesse nessa janela, a Isis
+já tinha passado pela conferência e falava por cima dele. Agora o bloqueio é reconferido
+na hora de enviar:
+
+- **Site:** `Corretor Respondeu Enquanto Isso?`, entre o Cérebro e a resposta.
+- **WhatsApp:** `Corretor Assumiu?`, dentro do loop de envio. Como roda antes de cada
+  parte, ela também interrompe no meio um envio quebrado em várias mensagens.
+
+O `PARAR ISIS1` também estava sem TTL definido — o n8n aplicava o padrão de 60 segundos, o
+que dava ao corretor apenas um minuto de silêncio. Agora são 24h, igual ao site.
 
 O resumo chega assim:
 

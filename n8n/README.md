@@ -13,14 +13,23 @@ Imobi.IA.json  ──────────┐
 Imobi.IA -                │     (prompt, memória, RAG)         │
 Canal Site.json  ─────────┘                                    ▼
 (webhook Chatwoot)                                Imobi.IA - Encaminhamento
-                                                    CRM.json (Supabase +
-                                                    Chatwoot + aviso WhatsApp)
+        ▲                                           CRM.json (Supabase +
+        │                                           Chatwoot + aviso WhatsApp)
+        │
+Imobi.IA - Follow-up.json
+(agenda 30min — lê as conversas
+ e cutuca quem parou de responder)
 ```
 
 Prompt, memória de conversa e a tool `encaminhamento` moraram sempre só no **Cérebro**.
 Os dois canais são só encanamento: recebem a mensagem no formato de cada plataforma,
 chamam o Cérebro, e devolvem a resposta pelo canal certo. Editar o prompt no Cérebro vale
 para WhatsApp e site ao mesmo tempo — sem duas cópias divergindo.
+
+O **Follow-up** é o único que não é disparado por mensagem de ninguém: ele acorda sozinho
+de tempos em tempos, lê as conversas que já existem no Chatwoot e decide pelo relógio.
+Por isso não passa pelo Cérebro — não há conversa em andamento para continuar, e a
+memória do Cérebro é de qualificação, não de reengajamento.
 
 ## Arquivos
 
@@ -30,7 +39,9 @@ para WhatsApp e site ao mesmo tempo — sem duas cópias divergindo.
 | `Imobi.IA - Canal Site.json` | Canal site (webhook Chatwoot → Cérebro → resposta) |
 | `Imobi.IA - Cerebro.json` | Agente Isis: prompt, memória, RAG e a tool `encaminhamento` |
 | `Imobi.IA - Encaminhamento CRM.json` | Sub-workflow chamado pela tool `encaminhamento` |
+| `Imobi.IA - Follow-up.json` | Agente de follow-up: lê as conversas e cutuca quem sumiu |
 | `sql/leads_qualificados.sql` | Tabela dos leads no Supabase |
+| `sql/followups.sql` | Tabela que registra os follow-ups já enviados |
 
 ## O que a Isis coleta
 
@@ -64,11 +75,15 @@ Regras que evitam o efeito formulário:
 Rode `sql/leads_qualificados.sql` no SQL Editor do Supabase. Se você já rodou a versão
 anterior deste arquivo, role até o bloco `MIGRACAO` no final e rode só ele.
 
+Rode também `sql/followups.sql`, no **mesmo banco** — é a tabela que o agente de follow-up
+usa para não cutucar o mesmo lead duas vezes.
+
 ### 2. Importe os workflows nesta ordem
 
 1. `Imobi.IA - Encaminhamento CRM.json`
 2. `Imobi.IA - Cerebro.json` (a tool `encaminhamento` dentro dele precisa do ID do passo 1)
 3. `Imobi.IA.json` e `Imobi.IA - Canal Site.json` (os dois precisam do ID do passo 2)
+4. `Imobi.IA - Follow-up.json` (independente — não precisa do ID de ninguém)
 
 ### 3. Credencial do Chatwoot
 
@@ -77,7 +92,7 @@ Em n8n → Credentials → **Header Auth**, com o nome exato `Chatwoot API`:
 - Name: `api_access_token`
 - Value: o token do seu perfil no Chatwoot (Perfil → Access Token)
 
-Essa mesma credencial é usada pelo Encaminhamento CRM e pelo Canal Site.
+Essa mesma credencial é usada pelo Encaminhamento CRM, pelo Canal Site e pelo Follow-up.
 
 ### 4. Configure o encaminhamento
 
@@ -105,6 +120,7 @@ Tres campos precisam apontar para o ID **de outro** workflow. Anote aqui para na
 | `Imobi.IA - Encaminhamento CRM` | *(preencher)* | `Imobi.IA - Cerebro` → node **encaminhamento** |
 | `Imobi.IA - Canal Site` | `9zcCejCbLK1iQbVd` | ninguem (entrada pelo webhook) |
 | `Imobi.IA` | — | ninguem (entrada pelo webhook) |
+| `Imobi.IA - Follow-up` | — | ninguem (entrada pela agenda) |
 
 > **Atencao:** nunca aponte o node `encaminhamento` para o ID do proprio Cerebro.
 > O Cerebro passaria a chamar a si mesmo a cada qualificacao concluida, criando
@@ -144,6 +160,35 @@ um corretor na inbox do **WhatsApp** também consegue calar a Isis.
 Por fim, cole em seu site o script que o Chatwoot te dá na tela de configuração da inbox
 (Settings → Inboxes → sua inbox → **Configuração do widget**). É um `<script>` para colar
 antes do `</body>`.
+
+### 9. Agente de follow-up
+
+Abra `Imobi.IA - Follow-up`, node **Config Follow-up**:
+
+| Campo | O que é |
+|---|---|
+| `chatwoot_url` | Mesma URL do Chatwoot |
+| `chatwoot_account_id` | Mesmo ID de conta |
+| `inbox_whatsapp_id` | ID da inbox do WhatsApp |
+| `inbox_site_id` | ID da inbox do widget do site |
+| `chatwoot_status` | Quais conversas varrer (`open`, ou `open,pending`) |
+| `chatwoot_paginas` | Quantas páginas de 25 conversas puxar por rodada (2 = 50) |
+| `bot_agent_id` | Só se o seu Chatwoot não devolver `content_attributes` — veja abaixo |
+| `evolution_instance` | Nome da instância na Evolution |
+| `etapas_horas` | A cadência. Padrão `3,24,72` |
+| `max_horas_conversa` | Depois disso a conversa é velha demais e sai do radar (padrão 336 = 14 dias) |
+| `alerta_corretor_horas` | Lead esperando resposta há mais que isso vira nota interna. `0` desliga |
+| `horario_inicio` / `horario_fim` | Janela de envio, hora cheia (padrão 9h–20h) |
+| `dias_semana` | `1` = segunda … `7` = domingo. Padrão `1,2,3,4,5,6` |
+| `timezone` | Fuso do horário comercial (padrão `America/Sao_Paulo`) |
+| `limite_conversas` | Teto de conversas avaliadas por rodada |
+
+Deixar `inbox_whatsapp_id` e `inbox_site_id` vazios funciona: sem eles o canal é inferido
+pelo telefone do contato (tem número → WhatsApp). Preencher é mais seguro, porque aí
+inboxes que não são da Isis ficam de fora.
+
+Depois é só ativar o workflow. O gatilho é uma agenda de 30 em 30 minutos, não um webhook —
+não há nada para configurar no Chatwoot nem na Evolution.
 
 ## O que acontece no encaminhamento
 
@@ -269,6 +314,134 @@ Diferente do WhatsApp, o canal site não duplica o histórico nas tabelas `chats
 Postgres Chat Memory) já é suficiente, e o próprio Chatwoot já guarda o histórico da
 conversa. Se quiser os mesmos relatórios que o WhatsApp tem nessas tabelas, dá para
 replicar os nodes `Adiciona/Atualiza CHAT Supabase` e `Cria Histórico Supabase1`.
+
+## O agente de follow-up
+
+Quem responde a Isis até o fim vira lead qualificado. O problema é quem não responde: a
+conversa fica pela metade, ninguém é avisado, e o lead simplesmente evapora. Nenhum dos
+outros workflows resolve isso, porque todos eles só acordam quando chega uma mensagem — e
+o silêncio, por definição, não dispara webhook nenhum.
+
+`Imobi.IA - Follow-up` é o único workflow com gatilho de **agenda**. A cada 30 minutos ele
+lê as conversas abertas do Chatwoot e decide pelo relógio.
+
+### A decisão
+
+Tudo gira em torno de duas perguntas: **quem falou por último** e **há quantas horas**.
+
+| Quem falou por último | O que acontece |
+|---|---|
+| **Isis** | O lead sumiu no meio da qualificação. É o caso de follow-up: cutuca conforme `etapas_horas` |
+| **Lead** | Ele perguntou e ninguém respondeu. Não se manda follow-up para quem está esperando — vira nota privada para o corretor |
+| **Corretor** | Humano no controle. O agente não faz nada, nem mensagem nem alerta |
+
+A terceira linha é a mesma regra que vale no resto do sistema: a Isis não fala por cima de
+um corretor. Aqui ela é aplicada duas vezes, por caminhos independentes — pela leitura de
+quem assinou a última mensagem, e pela chave de pausa no Redis, conferida logo antes de
+escrever. Se o corretor respondeu no minuto anterior, o follow-up morre na conferência.
+
+### A cadência
+
+`etapas_horas = 3,24,72` significa: 3h depois da pergunta que ficou no ar vem a primeira
+cutucada; 24h depois **dela** vem a segunda; 72h depois da segunda vem a terceira. Depois
+disso, silêncio — o agente não insiste mais.
+
+O relógio conta sempre da última mensagem, não da primeira. Duas consequências:
+
+- **A resposta do lead zera tudo.** Se ele volta a falar, a sequência anterior é
+  considerada encerrada; se sumir de novo mais tarde, começa outra vez da etapa 1.
+- **Não se acumula atraso.** Um lead parado há uma semana que nunca foi cutucado recebe
+  direto a mensagem da etapa 3, não as três em sequência. Mandar a cutucada de "3h" numa
+  conversa parada há 168h seria fingir que o tempo não passou.
+
+Cada envio é gravado em `followups_enviados`. É essa tabela que impede a mesma etapa de
+sair duas vezes — inclusive se duas rodadas se cruzarem.
+
+### O texto
+
+O agente **lê a conversa inteira** (últimas 20 mensagens, com quem falou e quando) e
+escreve a mensagem a partir dela. Não há template fixo: a etapa define o tom — cutucada
+leve, oferta de atalho, despedida elegante — e o histórico define o conteúdo, para que a
+mensagem retome o assunto real em vez de mandar um "oi, tudo bem?" genérico.
+
+O prompt proíbe explicitamente inventar imóvel, valor ou disponibilidade, prometer ligação
+de corretor, cobrar o lead ("você sumiu", "estou esperando") e repetir literalmente a
+pergunta anterior. Se o modelo devolver algo vazio ou quebrado, `Mensagem Pronta` limpa a
+saída e, no pior caso, usa um texto de reserva — nunca se envia mensagem em branco.
+
+### Por que o agente marca a própria mensagem
+
+Esta é a parte que quebra silenciosamente se alguém mexer. O follow-up sai pelos **mesmos
+canais** que a Isis usa, então ele volta como um evento de mensagem enviada — e os dois
+canais tratam mensagem de saída não reconhecida como "um humano assumiu", pausando a Isis
+por 24h. Sem cuidado, o agente calaria a Isis toda vez que cutucasse alguém.
+
+| Canal | Como o follow-up se identifica | Quem confere |
+|---|---|---|
+| WhatsApp | `Marca Msg da Isis` grava `isis_msg_<id>` no Redis por 15 min | `Eco da Isis?` (Imobi.IA) |
+| Site | O POST vai com `content_attributes.isis_bot` | `É Mensagem do Corretor?` (Canal Site) |
+
+São exatamente os mesmos mecanismos que os canais já usavam para não ouvir o próprio eco.
+O follow-up só se pendura neles.
+
+### Por que grava na memória do Cérebro
+
+Depois de enviar, `Grava na Memória da Isis` insere a mensagem em `n8n_chat_histories`
+como se fosse uma fala normal do agente. Sem isso a Isis não lembraria de ter cutucado: o
+lead responderia "pode ser" três dias depois e ela repetiria a pergunta do zero, como se
+nada tivesse acontecido.
+
+A sessão é resolvida por canal: no site é `site_<conversation_id>`; no WhatsApp é o uuid
+que o fluxo principal guardou em `dados_cliente` na primeira mensagem do lead. Se a sessão
+não existir, o insert não grava nada e o envio segue — o `where t.sid is not null` no SQL
+existe para isso.
+
+### Quando ele não faz nada
+
+- Fora do horário comercial (`horario_inicio`/`horario_fim`/`dias_semana`). Follow-up é
+  mensagem não solicitada: às 3 da manhã ela irrita em vez de recuperar o lead. A rodada
+  inteira nem chega a consultar o Chatwoot.
+- Conversa parada há mais de `max_horas_conversa` (padrão 14 dias).
+- Chave de pausa presente no Redis — handoff recente ou corretor respondendo agora.
+- Conversa de WhatsApp sem telefone no contato, ou de uma inbox que não é da Isis.
+- Etapa já enviada e a próxima janela ainda não venceu.
+
+Cada uma dessas saídas volta ao loop com um `motivo` legível no output do node
+`Decide Follow-up` — é por lá que se descobre por que um lead específico não foi cutucado.
+
+### Quando alguma peça cai
+
+Uma conversa com problema é pulada; a rodada continua nas outras. O que muda é a direção
+do erro, e ela não é a mesma em todo lugar:
+
+| Peça fora do ar | O que acontece |
+|---|---|
+| Redis | A conversa é **pulada**. Sem resposta do Redis não dá para afirmar que a Isis está liberada, e o risco de falar por cima de um corretor é pior que o de atrasar um follow-up |
+| `followups_enviados` | A conversa é **pulada**. Sem saber o que já foi enviado, seguir em frente reenviaria a etapa 1 para quem já foi cutucado |
+| Chatwoot (leitura) | A conversa fica sem mensagens legíveis e cai em "nada a fazer" |
+| Evolution / Chatwoot (envio) | O envio falha e nada é gravado — na próxima janela tenta de novo |
+
+O único ponto que falha para o lado permissivo é o registro **depois** do envio: se a
+mensagem sai mas o `insert` não grava, o agente perdeu a memória daquele envio. Não há como
+desfazer uma mensagem já entregue, então o node segue adiante em vez de travar a rodada. O
+estrago é limitado por construção: o follow-up recém-enviado passa a ser a última mensagem
+da conversa, o relógio zera, e só depois de vencer a primeira janela de novo é que sairia
+uma cutucada repetida.
+
+### O alerta de lead esperando
+
+Quando a última mensagem é do lead e ninguém respondeu em `alerta_corretor_horas`, o
+agente posta uma **nota privada** na conversa do Chatwoot. O lead não vê nada; quem vê é
+quem abrir a conversa no CRM. O alerta sai uma vez por mensagem do lead — se ele mandar
+outra e continuar sem resposta, sai de novo. Pondo `0` no campo, esse caminho é desligado.
+
+### O que dá para acompanhar
+
+`sql/followups.sql` cria duas views:
+
+- `followups_resumo` — quantos follow-ups saíram por etapa nos últimos 30 dias e em quantos
+  deles o lead voltou a falar. É o número que diz se a cadência está valendo a pena.
+- `followups_sem_retorno` — quem recebeu a sequência inteira e mesmo assim não voltou.
 
 ## Mudanças feitas no workflow original
 

@@ -1,0 +1,1181 @@
+{
+  "name": "Imobi.IA - Follow-up",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 30
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -2200,
+        0
+      ],
+      "id": "fu-agenda",
+      "name": "Agenda"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c1",
+              "name": "chatwoot_url",
+              "value": "https://SEU-CHATWOOT.com.br",
+              "type": "string"
+            },
+            {
+              "id": "c2",
+              "name": "chatwoot_account_id",
+              "value": "1",
+              "type": "string"
+            },
+            {
+              "id": "c3",
+              "name": "inbox_whatsapp_id",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "c4",
+              "name": "inbox_site_id",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "c5",
+              "name": "chatwoot_status",
+              "value": "open",
+              "type": "string"
+            },
+            {
+              "id": "c6",
+              "name": "chatwoot_paginas",
+              "value": "2",
+              "type": "string"
+            },
+            {
+              "id": "c7",
+              "name": "bot_agent_id",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "c8",
+              "name": "evolution_instance",
+              "value": "tim",
+              "type": "string"
+            },
+            {
+              "id": "c9",
+              "name": "etapas_horas",
+              "value": "3,24,72",
+              "type": "string"
+            },
+            {
+              "id": "c10",
+              "name": "max_horas_conversa",
+              "value": "336",
+              "type": "string"
+            },
+            {
+              "id": "c11",
+              "name": "alerta_corretor_horas",
+              "value": "4",
+              "type": "string"
+            },
+            {
+              "id": "c12",
+              "name": "horario_inicio",
+              "value": "9",
+              "type": "string"
+            },
+            {
+              "id": "c13",
+              "name": "horario_fim",
+              "value": "20",
+              "type": "string"
+            },
+            {
+              "id": "c14",
+              "name": "dias_semana",
+              "value": "1,2,3,4,5,6",
+              "type": "string"
+            },
+            {
+              "id": "c15",
+              "name": "timezone",
+              "value": "America/Sao_Paulo",
+              "type": "string"
+            },
+            {
+              "id": "c16",
+              "name": "limite_conversas",
+              "value": "100",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2000,
+        0
+      ],
+      "id": "fu-config",
+      "name": "Config Follow-up"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Follow-up e mensagem nao solicitada: fora de hora ela irrita em vez de\n// recuperar o lead. Este node e o unico lugar que decide se a rodada roda.\nconst cfg = $('Config Follow-up').first().json;\nconst tz = cfg.timezone || 'America/Sao_Paulo';\n\nconst num = (v, padrao) => {\n  const n = Number(v);\n  return Number.isFinite(n) ? n : padrao;\n};\n\nconst inicio = num(cfg.horario_inicio, 9);\nconst fim = num(cfg.horario_fim, 20);\nconst dias = String(cfg.dias_semana || '1,2,3,4,5,6')\n  .split(',')\n  .map((s) => Number(s.trim()))\n  .filter((n) => Number.isFinite(n));\n\n// weekday no Luxon: 1 = segunda ... 7 = domingo\nconst agora = $now.setZone(tz);\nconst dentro = dias.includes(agora.weekday) && agora.hour >= inicio && agora.hour < fim;\n\nreturn [{\n  json: {\n    dentro,\n    agora: agora.toISO(),\n    hora: agora.hour,\n    dia_semana: agora.weekday,\n    janela: inicio + 'h-' + fim + 'h (' + tz + ')',\n  },\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1800,
+        0
+      ],
+      "id": "fu-janela",
+      "name": "Janela Comercial"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "j1",
+              "leftValue": "={{ $json.dentro }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -1600,
+        0
+      ],
+      "id": "fu-if-janela",
+      "name": "Dentro do Horário?"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -1400,
+        176
+      ],
+      "id": "fu-fora-horario",
+      "name": "Fora do Horário (não incomoda)"
+    },
+    {
+      "parameters": {
+        "jsCode": "// O endpoint de conversas do Chatwoot devolve 25 por pagina e ignora per_page.\n// Para varrer mais que isso a unica saida e pedir pagina por pagina.\nconst cfg = $('Config Follow-up').first().json;\nconst total = Math.max(1, Math.min(Number(cfg.chatwoot_paginas) || 1, 20));\nconst status = String(cfg.chatwoot_status || 'open').trim() || 'open';\n\nconst paginas = [];\nfor (let p = 1; p <= total; p++) {\n  paginas.push({\n    json: {\n      url: cfg.chatwoot_url.replace(/\\/+$/, '')\n        + '/api/v1/accounts/' + cfg.chatwoot_account_id\n        + '/conversations?status=' + encodeURIComponent(status)\n        + '&assignee_type=all&page=' + p,\n      pagina: p,\n    },\n  });\n}\nreturn paginas;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1400,
+        -16
+      ],
+      "id": "fu-paginas",
+      "name": "Páginas"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.url }}",
+        "authentication": "genericCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1200,
+        -16
+      ],
+      "id": "fu-puxa-conversas",
+      "name": "Puxa Conversas",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CHATWOOT_HEADER_AUTH",
+          "name": "Chatwoot API"
+        }
+      },
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normaliza o que veio do Chatwoot numa lista simples de conversas que a Isis\n// atende, ja com o canal e a chave de pausa resolvidos. O formato da resposta\n// mudou entre versoes do Chatwoot, por isso a leitura e defensiva.\nconst cfg = $('Config Follow-up').first().json;\nconst inboxWa = String(cfg.inbox_whatsapp_id || '').trim();\nconst inboxSite = String(cfg.inbox_site_id || '').trim();\nconst limite = Number(cfg.limite_conversas) || 100;\n\n// Chatwoot e Evolution guardam o numero com DDI. Sem o 55 a chave de pausa nao\n// bate com o remoteJid e a Isis falaria por cima do corretor.\nconst comDDI = (n) => (n.length === 10 || n.length === 11) ? '55' + n : n;\n\nconst brutas = [];\nfor (const item of $input.all()) {\n  const j = item.json || {};\n  const lista = (j.data && (j.data.payload || j.data.conversations))\n    || j.payload\n    || j.conversations\n    || (Array.isArray(j.data) ? j.data : null)\n    || [];\n  for (const c of lista) brutas.push(c && c.conversation ? c.conversation : c);\n}\n\nconst vistos = new Set();\nconst saida = [];\n\nfor (const c of brutas) {\n  if (!c) continue;\n  const id = String(c.id || '');\n  if (!id || vistos.has(id)) continue;\n  vistos.add(id);\n\n  const meta = c.meta || {};\n  const contato = meta.sender || c.contact || {};\n  const telefone = comDDI(String(contato.phone_number || '').replace(/\\D/g, ''));\n  const inbox = String(c.inbox_id || (meta.channel_id || '') || '');\n\n  // Com os ids de inbox preenchidos, o canal e explicito. Sem eles, cai no\n  // criterio que sempre vale: quem tem telefone veio do WhatsApp.\n  let canal;\n  if (inboxWa || inboxSite) {\n    if (inboxWa && inbox === inboxWa) canal = 'whatsapp';\n    else if (inboxSite && inbox === inboxSite) canal = 'site';\n    else continue;  // inbox que nao e da Isis\n  } else {\n    canal = telefone ? 'whatsapp' : 'site';\n  }\n\n  // Sem numero nao ha para onde mandar mensagem no WhatsApp.\n  if (canal === 'whatsapp' && !telefone) continue;\n\n  const remote_jid = telefone ? telefone + '@s.whatsapp.net' : '';\n  const block_key = canal === 'site'\n    ? 'site_' + id + '_block'\n    : remote_jid + '_block';\n\n  saida.push({\n    json: {\n      conversation_id: id,\n      inbox_id: inbox,\n      canal,\n      status: c.status || '',\n      nome: contato.name || contato.email || 'Visitante do site',\n      telefone,\n      remote_jid,\n      block_key,\n    },\n  });\n\n  if (saida.length >= limite) break;\n}\n\nreturn saida;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1000,
+        -16
+      ],
+      "id": "fu-lista-conversas",
+      "name": "Lista Conversas"
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {
+          "reset": false
+        }
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -800,
+        -16
+      ],
+      "id": "fu-loop",
+      "name": "Loop Conversas"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -600,
+        -176
+      ],
+      "id": "fu-fim",
+      "name": "Fim da Rodada"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('Config Follow-up').first().json.chatwoot_url.replace(/\\/+$/, '') }}/api/v1/accounts/{{ $('Config Follow-up').first().json.chatwoot_account_id }}/conversations/{{ $('Loop Conversas').first().json.conversation_id }}/messages",
+        "authentication": "genericCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -600,
+        64
+      ],
+      "id": "fu-le-mensagens",
+      "name": "Lê Mensagens",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CHATWOOT_HEADER_AUTH",
+          "name": "Chatwoot API"
+        }
+      },
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select etapa, status, created_at\n  from followups_enviados\n where conversation_id = $1\n   and canal = $2\n   and created_at > now() - interval '60 days'\n order by created_at desc\n limit 30;",
+        "options": {
+          "queryReplacement": "={{ [ $('Loop Conversas').first().json.conversation_id, $('Loop Conversas').first().json.canal ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        -400,
+        64
+      ],
+      "id": "fu-busca-followups",
+      "name": "Follow-ups da Conversa",
+      "credentials": {
+        "postgres": {
+          "id": "7Fp9EthW5ztW9E4P",
+          "name": "Prospect"
+        }
+      },
+      "alwaysOutputData": true,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// O cerebro do agente. Le a conversa inteira, descobre quem falou por ultimo e\n// ha quantas horas, cruza com os follow-ups ja enviados e devolve uma acao:\n//\n//   followup -> a Isis perguntou algo e o lead sumiu: cutucar\n//   alerta   -> o lead perguntou algo e ninguem respondeu: avisar o corretor\n//   nada     -> nao ha o que fazer nesta conversa agora\nconst cfg = $('Config Follow-up').first().json;\nconst conv = $('Loop Conversas').first().json;\nconst tz = cfg.timezone || 'America/Sao_Paulo';\nconst cfgBot = String(cfg.bot_agent_id || '').trim();\n\n// ---------- 1. mensagens ----------\nlet brutas = [];\ntry {\n  const r = $('Lê Mensagens').first().json || {};\n  brutas = r.payload || r.messages\n    || (r.data && (r.data.payload || r.data.messages))\n    || (Array.isArray(r.data) ? r.data : null)\n    || [];\n} catch (e) {\n  brutas = [];\n}\nif (!Array.isArray(brutas)) brutas = [];\n\n// message_type chega como numero na API (0 incoming, 1 outgoing, 2 activity,\n// 3 template) e como texto no webhook. Aceitamos as duas formas.\nconst tipoDe = (m) => {\n  const t = m.message_type;\n  if (t === 0 || t === '0' || t === 'incoming') return 'incoming';\n  if (t === 1 || t === '1' || t === 'outgoing') return 'outgoing';\n  return 'outro';\n};\n\n// A Isis e o corretor chegam os dois como outgoing. Ela assina as proprias\n// mensagens com content_attributes.isis_bot — e essa assinatura que separa.\nconst ehDaIsis = (m) => {\n  const attrs = m.content_attributes || {};\n  if (attrs.isis_bot === true) return true;\n  const sender = m.sender || {};\n  if (String(sender.type || '').toLowerCase() === 'agent_bot') return true;\n  if (cfgBot && String(sender.id || '') === cfgBot) return true;\n  return false;\n};\n\nconst quando = (m) => {\n  const t = m.created_at;\n  if (typeof t === 'number') return new Date(t * 1000);\n  const n = Number(t);\n  if (Number.isFinite(n) && n > 0) return new Date(n * 1000);\n  return new Date(t);\n};\n\nconst msgs = [];\nfor (const m of brutas) {\n  if (!m || m.private === true) continue;\n  const tipo = tipoDe(m);\n  if (tipo === 'outro') continue;\n  const texto = String(m.content || '').trim();\n  if (!texto) continue;\n  const at = quando(m);\n  if (!(at instanceof Date) || isNaN(at.getTime())) continue;\n  msgs.push({\n    quem: tipo === 'incoming' ? 'lead' : (ehDaIsis(m) ? 'isis' : 'corretor'),\n    at,\n    texto,\n  });\n}\nmsgs.sort((a, b) => a.at - b.at);\n\nconst nada = (motivo) => [{\n  json: {\n    acao: 'nada',\n    motivo,\n    conversation_id: conv.conversation_id,\n    canal: conv.canal,\n  },\n}];\n\nif (msgs.length === 0) return nada('conversa sem mensagens de texto');\n\nconst ultima = msgs[msgs.length - 1];\nconst ultimaDoLead = [...msgs].reverse().find((m) => m.quem === 'lead') || null;\n\n// Relogio do servidor vs. do Chatwoot pode divergir alguns segundos.\nconst horas = Math.max(0, (Date.now() - ultima.at.getTime()) / 3600000);\nconst horasRed = Math.round(horas * 10) / 10;\n\n// ---------- 2. o que ja fizemos aqui ----------\nconst enviados = [];\nlet ultimoAlerta = null;\nfor (const item of $input.all()) {\n  const r = item.json || {};\n  if (!r.created_at) continue;\n  const at = new Date(r.created_at);\n  if (isNaN(at.getTime())) continue;\n  if (r.status === 'alerta') {\n    if (!ultimoAlerta || at > ultimoAlerta) ultimoAlerta = at;\n  } else {\n    enviados.push({ etapa: Number(r.etapa) || 0, at });\n  }\n}\n\n// Se o lead voltou a falar, a cadencia anterior morreu: so contam os\n// follow-ups enviados depois da ultima fala dele.\nconst corte = ultimaDoLead ? ultimaDoLead.at.getTime() : 0;\nconst ultimaEtapa = enviados\n  .filter((e) => e.at.getTime() > corte)\n  .reduce((max, e) => Math.max(max, e.etapa), 0);\n\n// ---------- 3. contexto para o redator ----------\nconst rotulo = { lead: 'Lead', isis: 'Isis', corretor: 'Corretor' };\nconst historico = msgs.slice(-20).map((m) =>\n  rotulo[m.quem] + ' (' + m.at.toLocaleString('pt-BR', { timeZone: tz }) + '): ' + m.texto\n).join('\\n');\n\nconst base = {\n  conversation_id: conv.conversation_id,\n  canal: conv.canal,\n  nome: conv.nome,\n  telefone: conv.telefone,\n  remote_jid: conv.remote_jid,\n  block_key: conv.block_key,\n  horas: horasRed,\n  ultima_de: ultima.quem,\n  ultima_em: ultima.at.toISOString(),\n  historico,\n  total_mensagens: msgs.length,\n};\n\n// ---------- 4. decisao ----------\nconst maxHoras = Number(cfg.max_horas_conversa) || 336;\nif (horas > maxHoras) {\n  return nada('conversa parada ha ' + horasRed + 'h, acima do limite de ' + maxHoras + 'h');\n}\n\n// O corretor falou por ultimo: o lead e dele agora. A Isis nao cutuca por cima\n// de um humano — e a mesma regra que vale no resto do fluxo.\nif (ultima.quem === 'corretor') {\n  return nada('corretor falou por ultimo e esta com a conversa');\n}\n\n// O lead perguntou e ninguem respondeu. Nao e caso de follow-up: e caso de\n// avisar quem deveria ter respondido.\nif (ultima.quem === 'lead') {\n  const alertaHoras = Number(cfg.alerta_corretor_horas) || 0;\n  if (alertaHoras <= 0) return nada('lead aguardando resposta; alerta desativado');\n  if (horas < alertaHoras) {\n    return nada('lead aguardando ha ' + horasRed + 'h, abaixo das ' + alertaHoras + 'h');\n  }\n  if (ultimoAlerta && ultimoAlerta >= ultima.at) {\n    return nada('alerta ja registrado para esta mensagem do lead');\n  }\n  return [{ json: { ...base, acao: 'alerta', etapa: 0 } }];\n}\n\n// ultima.quem === 'isis': a pergunta ficou no ar. Este e o caso de follow-up.\nconst etapas = String(cfg.etapas_horas || '3,24,72')\n  .split(',')\n  .map((s) => Number(s.trim()))\n  .filter((n) => Number.isFinite(n) && n > 0)\n  .sort((a, b) => a - b);\n\nif (etapas.length === 0) return nada('nenhuma etapa configurada em etapas_horas');\n\n// Quantas janelas ja venceram. Se o lead sumiu ha 100h e nunca foi cutucado,\n// mandamos direto a etapa mais avancada: repetir a cutucada de 3h agora seria\n// fingir que o tempo nao passou.\nconst devida = etapas.filter((h) => horas >= h).length;\n\nif (devida === 0) {\n  return nada('ainda dentro da primeira janela de ' + etapas[0] + 'h (' + horasRed + 'h)');\n}\nif (devida <= ultimaEtapa) {\n  return nada('follow-up ' + ultimaEtapa + '/' + etapas.length + ' ja enviado; aguardando a proxima janela');\n}\n\nreturn [{\n  json: {\n    ...base,\n    acao: 'followup',\n    etapa: devida,\n    total_etapas: etapas.length,\n    etapa_anterior: ultimaEtapa,\n    janela_horas: etapas[devida - 1],\n  },\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -200,
+        64
+      ],
+      "id": "fu-decide",
+      "name": "Decide Follow-up"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "a1",
+                    "leftValue": "={{ $json.acao }}",
+                    "rightValue": "followup",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "followup"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "a2",
+                    "leftValue": "={{ $json.acao }}",
+                    "rightValue": "alerta",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "alerta"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "nada"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        0,
+        64
+      ],
+      "id": "fu-switch-acao",
+      "name": "Precisa Agir?"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "propertyName": "bloqueado",
+        "key": "={{ $('Decide Follow-up').first().json.block_key }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        200,
+        -96
+      ],
+      "id": "fu-verifica-pausa",
+      "name": "Corretor Assumiu?",
+      "credentials": {
+        "redis": {
+          "id": "Dr2yUkSVjsLZcCVx",
+          "name": "Prospec"
+        }
+      },
+      "alwaysOutputData": true,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "p1",
+              "leftValue": "={{ $json.bloqueado }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        400,
+        -96
+      ],
+      "id": "fu-if-pausa",
+      "name": "Isis Pausada?"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        600,
+        -224
+      ],
+      "id": "fu-pausada",
+      "name": "Não Cutuca (corretor no controle)"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Decide Follow-up').first().json.historico }}",
+        "options": {
+          "systemMessage": "=<papel>\nVocê é a Isis, assistente virtual da Imobiliária Immerse, retomando uma conversa que ficou sem resposta.\n\nSua única tarefa aqui é escrever UMA mensagem curta de follow-up para o lead. Você não qualifica, não encaminha, não chama ferramentas, não responde perguntas — só reabre a conversa.\n\nResponda APENAS com o texto da mensagem, pronto para ser enviado. Sem aspas, sem \"Isis:\", sem explicação, sem assinatura.\n</papel>\n\n<contexto>\nLead: {{ $('Decide Follow-up').first().json.nome }}\nCanal: {{ $('Decide Follow-up').first().json.canal }}\nSem resposta há: {{ $('Decide Follow-up').first().json.horas }} horas\nTentativa: {{ $('Decide Follow-up').first().json.etapa }} de {{ $('Decide Follow-up').first().json.total_etapas }}\nHoje é {{ $now.setZone('America/Sao_Paulo').weekdayLong }}, {{ $now.setZone('America/Sao_Paulo').format('dd/MM/yyyy') }}, {{ $now.setZone('America/Sao_Paulo').format('HH:mm') }}\n\nA conversa até aqui vem na mensagem do usuário, em ordem cronológica, com quem falou e quando.\n</contexto>\n\n<lei>\nNunca invente imóveis, valores, endereços, disponibilidade, prazos ou condições comerciais. Você não consultou nenhuma base aqui.\n\nNunca prometa que um corretor vai ligar, nem marque horário.\n\nNunca repita literalmente a última mensagem que você já enviou. Se a pergunta que ficou no ar precisa voltar, reformule com outras palavras.\n\nNunca pergunte algo que o lead já respondeu no histórico.\n\nNunca cobre o lead, nem faça ele se sentir devendo resposta. Nada de \"você sumiu\", \"estou esperando\", \"não recebi seu retorno\".\n\nNunca use urgência artificial, contagem regressiva ou oferta que você não pode confirmar.\n\nNunca mande mais de uma pergunta.\n</lei>\n\n<forma>\nNo máximo 2 frases curtas, até 300 caracteres.\n\nTom leve, natural, brasileiro, como quem retoma um papo — não como um robô cumprindo cota.\n\nNo máximo um emoji, e só quando couber.\n\nUse o primeiro nome do lead se ele for um nome de pessoa de verdade. Se o nome for genérico (\"Visitante do site\", \"Contato\", um e-mail), não use nome nenhum.\n\nTermine com uma pergunta fácil de responder — de preferência uma que o lead resolva com uma palavra.\n</forma>\n\n<tentativas>\nA tentativa muda o tom, e cada uma só acontece se a anterior não teve resposta.\n\nTentativa 1 — cutucada leve, poucas horas depois. Retome exatamente o ponto onde a conversa parou e devolva a pergunta que ficou no ar, reformulada.\nExemplo de espírito: \"Oi, Carla! Voltando aqui rapidinho: você está buscando pra comprar ou pra alugar?\"\n\nTentativa 2 — um dia depois. Reconheça que a pessoa pode estar sem tempo e ofereça o caminho mais curto: terminar depois, ou já falar com um corretor.\nExemplo de espírito: \"Oi, Carla! Imagino que a semana esteja corrida 🙂 Quer que eu já passe sua busca pra um corretor, ou prefere terminar as perguntas com calma?\"\n\nTentativa 3 — última tentativa, dias depois. Encerre com elegância: deixe a porta aberta sem pedir nada, e deixe claro que é você quem para de escrever.\nExemplo de espírito: \"Oi, Carla! Vou parar de te escrever pra não encher sua caixa 😊 Se voltar a procurar imóvel, é só me chamar por aqui que a gente continua de onde parou.\"\n\nSe a tentativa for maior que 3, use o tom da tentativa 3.\n\nOs exemplos são de espírito, não de texto. Escreva sempre a partir do que está no histórico desta conversa.\n</tentativas>"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.6,
+      "position": [
+        600,
+        -32
+      ],
+      "id": "fu-redator",
+      "name": "Redator do Follow-up"
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o-mini",
+        "options": {
+          "temperature": 0.4
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [
+        600,
+        144
+      ],
+      "id": "fu-modelo",
+      "name": "Modelo do Redator",
+      "credentials": {
+        "openAiApi": {
+          "id": "V5bZW8mj00Z1L92l",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// O modelo as vezes devolve a frase entre aspas, prefixada com \"Isis:\" ou com\n// um paragrafo de explicacao junto. Aqui fica so o que vai para o lead — e, se\n// nada sobrar, um texto de reserva, para a rodada nunca enviar mensagem vazia.\nconst d = $('Decide Follow-up').first().json;\n\nlet txt = String($json.output ?? $json.text ?? '').trim();\ntxt = txt.replace(/^```[a-z]*\\s*/i, '').replace(/```$/, '').trim();\ntxt = txt.replace(/^[\"'`“”]+|[\"'`“”]+$/g, '').trim();\ntxt = txt.replace(/^Isis\\s*:\\s*/i, '').trim();\nif (txt.length > 600) txt = txt.slice(0, 600).trim();\n\n// Nome so entra na mensagem se for nome de gente. O canal site preenche\n// \"Visitante do site\" quando o lead nao se identificou.\nconst bruto = String(d.nome || '').trim();\nconst generico = /^(visitante|contato|cliente|lead|usuario|usuário)/i.test(bruto)\n  || bruto.includes('@')\n  || bruto === '';\nconst nome = generico ? '' : bruto.split(/\\s+/)[0];\nconst oi = nome ? 'Oi, ' + nome + '!' : 'Oi!';\n\nif (!txt) {\n  const reserva = {\n    1: oi + ' Voltando aqui rapidinho — quer continuar de onde a gente parou?',\n    2: oi + ' Imagino que a semana esteja corrida. Quer que eu já passe sua busca para um corretor?',\n    3: oi + ' Vou parar de escrever para não encher sua caixa 😊 Se voltar a procurar imóvel, é só me chamar por aqui.',\n  };\n  txt = reserva[d.etapa] || reserva[3];\n}\n\nreturn [{ json: { ...d, mensagem: txt, gerado_por_ia: !!String($json.output ?? '').trim() } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        -32
+      ],
+      "id": "fu-mensagem",
+      "name": "Mensagem Pronta"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "k1",
+                    "leftValue": "={{ $json.canal }}",
+                    "rightValue": "whatsapp",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "whatsapp"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "k2",
+                    "leftValue": "={{ $json.canal }}",
+                    "rightValue": "site",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "site"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "canal desconhecido"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        1000,
+        -32
+      ],
+      "id": "fu-switch-canal",
+      "name": "Canal?"
+    },
+    {
+      "parameters": {
+        "resource": "messages-api",
+        "instanceName": "={{ $('Config Follow-up').first().json.evolution_instance }}",
+        "remoteJid": "={{ $('Mensagem Pronta').first().json.telefone }}",
+        "messageText": "={{ $('Mensagem Pronta').first().json.mensagem }}",
+        "options_message": {
+          "delay": 1200,
+          "linkPreview": false
+        }
+      },
+      "type": "n8n-nodes-evolution-api.evolutionApi",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        -160
+      ],
+      "id": "fu-envia-wa",
+      "name": "Envia no WhatsApp",
+      "credentials": {
+        "evolutionApi": {
+          "id": "B2PbE6KeuyKr1eiD",
+          "name": "Evolution account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "set",
+        "key": "=isis_msg_{{ $json.key?.id || $json.messageId || $json.id || 'sem-id' }}",
+        "value": "1",
+        "keyType": "string",
+        "expire": true,
+        "ttl": 900
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        1400,
+        -160
+      ],
+      "id": "fu-marca-msg",
+      "name": "Marca Msg da Isis",
+      "credentials": {
+        "redis": {
+          "id": "Dr2yUkSVjsLZcCVx",
+          "name": "Prospec"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config Follow-up').first().json.chatwoot_url.replace(/\\/+$/, '') }}/api/v1/accounts/{{ $('Config Follow-up').first().json.chatwoot_account_id }}/conversations/{{ $('Mensagem Pronta').first().json.conversation_id }}/messages",
+        "authentication": "genericCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ content: $('Mensagem Pronta').first().json.mensagem, message_type: 'outgoing', private: false, content_attributes: { isis_bot: true } }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1200,
+        32
+      ],
+      "id": "fu-envia-site",
+      "name": "Envia no Site",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CHATWOOT_HEADER_AUTH",
+          "name": "Chatwoot API"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "insert into followups_enviados\n  (conversation_id, canal, telefone, nome, status, etapa, horas_sem_resposta, ultima_de, mensagem)\nvalues ($1, $2, $3, $4, 'enviado', $5, $6, $7, $8);",
+        "options": {
+          "queryReplacement": "={{ [ $('Mensagem Pronta').first().json.conversation_id, $('Mensagem Pronta').first().json.canal, $('Mensagem Pronta').first().json.telefone, $('Mensagem Pronta').first().json.nome, $('Mensagem Pronta').first().json.etapa, $('Mensagem Pronta').first().json.horas, $('Mensagem Pronta').first().json.ultima_de, $('Mensagem Pronta').first().json.mensagem ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        1600,
+        -32
+      ],
+      "id": "fu-registra",
+      "name": "Registra Follow-up",
+      "credentials": {
+        "postgres": {
+          "id": "7Fp9EthW5ztW9E4P",
+          "name": "Prospect"
+        }
+      },
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- O follow-up precisa entrar no historico do agente. Sem isso a Isis nao\n-- lembra que cutucou, e repete a pergunta quando o lead finalmente responde.\n-- No site a sessao e site_<conversation_id>; no WhatsApp e o uuid guardado\n-- em dados_cliente na primeira mensagem do lead.\ninsert into n8n_chat_histories (session_id, message)\nselect t.sid,\n       jsonb_build_object(\n         'type', 'ai',\n         'data', jsonb_build_object(\n           'content', $1::text,\n           'additional_kwargs', '{}'::jsonb,\n           'response_metadata', '{}'::jsonb\n         )\n       )\n  from (\n       select case when $2 = 'site'\n                   then 'site_' || $3\n                   else (select sessionid\n                           from dados_cliente\n                          where telefone = $4\n                          limit 1)\n              end as sid\n       ) t\n where t.sid is not null;",
+        "options": {
+          "queryReplacement": "={{ [ $('Mensagem Pronta').first().json.mensagem, $('Mensagem Pronta').first().json.canal, $('Mensagem Pronta').first().json.conversation_id, $('Mensagem Pronta').first().json.remote_jid ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        1800,
+        -32
+      ],
+      "id": "fu-memoria",
+      "name": "Grava na Memória da Isis",
+      "credentials": {
+        "postgres": {
+          "id": "7Fp9EthW5ztW9E4P",
+          "name": "Prospect"
+        }
+      },
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config Follow-up').first().json.chatwoot_url.replace(/\\/+$/, '') }}/api/v1/accounts/{{ $('Config Follow-up').first().json.chatwoot_account_id }}/conversations/{{ $('Decide Follow-up').first().json.conversation_id }}/messages",
+        "authentication": "genericCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ content: '⏰ *Lead aguardando resposta*\\n\\nA última mensagem é do lead e está sem resposta há ' + $('Decide Follow-up').first().json.horas + 'h.\\n\\nA Isis não responde aqui porque a conversa já saiu do pré-atendimento — o retorno precisa ser de um corretor.', message_type: 'outgoing', private: true, content_attributes: { isis_bot: true } }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        200,
+        224
+      ],
+      "id": "fu-nota-alerta",
+      "name": "Nota de Alerta no Chatwoot",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CHATWOOT_HEADER_AUTH",
+          "name": "Chatwoot API"
+        }
+      },
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "insert into followups_enviados\n  (conversation_id, canal, telefone, nome, status, etapa, horas_sem_resposta, ultima_de, mensagem)\nvalues ($1, $2, $3, $4, 'alerta', 0, $5, $6, $7);",
+        "options": {
+          "queryReplacement": "={{ [ $('Decide Follow-up').first().json.conversation_id, $('Decide Follow-up').first().json.canal, $('Decide Follow-up').first().json.telefone, $('Decide Follow-up').first().json.nome, $('Decide Follow-up').first().json.horas, $('Decide Follow-up').first().json.ultima_de, 'Alerta interno: lead sem resposta.' ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        400,
+        224
+      ],
+      "id": "fu-registra-alerta",
+      "name": "Registra Alerta",
+      "credentials": {
+        "postgres": {
+          "id": "7Fp9EthW5ztW9E4P",
+          "name": "Prospect"
+        }
+      },
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "content": "## Agente de Follow-up\n\nA cada 30 min, lê as conversas do Chatwoot e decide pelo **tempo desde a última mensagem**:\n\n- última fala é da **Isis** → o lead sumiu no meio da qualificação: cutuca, seguindo `etapas_horas`.\n- última fala é do **lead** → ninguém respondeu: nota privada para o corretor.\n- última fala é do **corretor** → não faz nada. Humano no controle.\n\nNão envia fora do horário comercial, nem quando a Isis está pausada no Redis.\n\nAntes de ativar: rode `sql/followups.sql` e preencha o **Config Follow-up**.",
+        "height": 420,
+        "width": 400,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2220,
+        -480
+      ],
+      "id": "fu-sticky-1",
+      "name": "Nota Agente"
+    },
+    {
+      "parameters": {
+        "content": "## Cadência\n\n`etapas_horas = 3,24,72` significa:\n\n1ª cutucada 3h depois da pergunta da Isis · 2ª 24h depois da 1ª · 3ª 72h depois da 2ª. Depois disso, silêncio.\n\nO relógio sempre conta da **última mensagem**, então a resposta do lead zera a cadência — se ele sumir de novo, começa da etapa 1.\n\nSe várias janelas venceram de uma vez (lead parado há dias e nunca cutucado), vai direto a etapa mais avançada em vez de mandar as anteriores em sequência.",
+        "height": 360,
+        "width": 380,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -420,
+        -560
+      ],
+      "id": "fu-sticky-2",
+      "name": "Nota Cadência"
+    },
+    {
+      "parameters": {
+        "content": "## Por que marcar a própria mensagem\n\nO follow-up sai pelos mesmos canais que a Isis usa, então volta como evento de mensagem — e os dois canais tratam mensagem de saída não reconhecida como \"corretor assumiu\", pausando a Isis por 24h.\n\n**WhatsApp:** `Marca Msg da Isis` grava `isis_msg_<id>` no Redis, que é o que `Eco da Isis?` consulta no fluxo principal.\n\n**Site:** o POST vai com `content_attributes.isis_bot`, que é o que `É Mensagem do Corretor?` checa.\n\nTirar qualquer um dos dois faz a Isis se calar sozinha.",
+        "height": 380,
+        "width": 400,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1180,
+        -620
+      ],
+      "id": "fu-sticky-3",
+      "name": "Nota Eco"
+    }
+  ],
+  "connections": {
+    "Agenda": {
+      "main": [
+        [
+          {
+            "node": "Config Follow-up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config Follow-up": {
+      "main": [
+        [
+          {
+            "node": "Janela Comercial",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Janela Comercial": {
+      "main": [
+        [
+          {
+            "node": "Dentro do Horário?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dentro do Horário?": {
+      "main": [
+        [
+          {
+            "node": "Páginas",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fora do Horário (não incomoda)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Páginas": {
+      "main": [
+        [
+          {
+            "node": "Puxa Conversas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Puxa Conversas": {
+      "main": [
+        [
+          {
+            "node": "Lista Conversas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lista Conversas": {
+      "main": [
+        [
+          {
+            "node": "Loop Conversas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Conversas": {
+      "main": [
+        [
+          {
+            "node": "Fim da Rodada",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Lê Mensagens",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lê Mensagens": {
+      "main": [
+        [
+          {
+            "node": "Follow-ups da Conversa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Follow-ups da Conversa": {
+      "main": [
+        [
+          {
+            "node": "Decide Follow-up",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Conversas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Decide Follow-up": {
+      "main": [
+        [
+          {
+            "node": "Precisa Agir?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Precisa Agir?": {
+      "main": [
+        [
+          {
+            "node": "Corretor Assumiu?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Nota de Alerta no Chatwoot",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Conversas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Corretor Assumiu?": {
+      "main": [
+        [
+          {
+            "node": "Isis Pausada?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Conversas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Isis Pausada?": {
+      "main": [
+        [
+          {
+            "node": "Não Cutuca (corretor no controle)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Redator do Follow-up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Não Cutuca (corretor no controle)": {
+      "main": [
+        [
+          {
+            "node": "Loop Conversas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Modelo do Redator": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Redator do Follow-up",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redator do Follow-up": {
+      "main": [
+        [
+          {
+            "node": "Mensagem Pronta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mensagem Pronta": {
+      "main": [
+        [
+          {
+            "node": "Canal?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Canal?": {
+      "main": [
+        [
+          {
+            "node": "Envia no WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Envia no Site",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Conversas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Envia no WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Marca Msg da Isis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Marca Msg da Isis": {
+      "main": [
+        [
+          {
+            "node": "Registra Follow-up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Envia no Site": {
+      "main": [
+        [
+          {
+            "node": "Registra Follow-up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registra Follow-up": {
+      "main": [
+        [
+          {
+            "node": "Grava na Memória da Isis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Grava na Memória da Isis": {
+      "main": [
+        [
+          {
+            "node": "Loop Conversas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Nota de Alerta no Chatwoot": {
+      "main": [
+        [
+          {
+            "node": "Registra Alerta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registra Alerta": {
+      "main": [
+        [
+          {
+            "node": "Loop Conversas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}

@@ -175,13 +175,20 @@ Abra `Imobi.IA - Follow-up`, node **Config Follow-up**:
 | `chatwoot_paginas` | Quantas páginas de 25 conversas puxar por rodada (2 = 50) |
 | `bot_agent_id` | Só se o seu Chatwoot não devolver `content_attributes` — veja abaixo |
 | `evolution_instance` | Nome da instância na Evolution |
-| `etapas_horas` | A cadência. Padrão `3,24,72` |
+| `etapas_horas` | A cadência, em **horas acumuladas desde a mensagem sem resposta**. Padrão `3,8,12` |
 | `max_horas_conversa` | Depois disso a conversa é velha demais e sai do radar (padrão 336 = 14 dias) |
 | `alerta_corretor_horas` | Lead esperando resposta há mais que isso vira nota interna. `0` desliga |
-| `horario_inicio` / `horario_fim` | Janela de envio, hora cheia (padrão 9h–20h) |
+| `horario_inicio` / `horario_fim` | Janela de envio (padrão 8h–20h, com as 20:00 cravadas ainda valendo) |
+| `antecipacao_minutos` | Tolerância da rodada de fechamento (padrão 5). Negativo desliga a antecipação |
 | `dias_semana` | `1` = segunda … `7` = domingo. Padrão `1,2,3,4,5,6` |
 | `timezone` | Fuso do horário comercial (padrão `America/Sao_Paulo`) |
 | `limite_conversas` | Teto de conversas avaliadas por rodada |
+
+O workflow roda com `timezone` própria (`America/Sao_Paulo`) nas configurações, e o
+gatilho é um cron `0,30 * * * *` — não "a cada 30 minutos". A diferença importa: o
+intervalo do n8n ancora no minuto em que o workflow foi ativado, então as rodadas cairiam
+em 19:47, 20:17… e nunca em 20:00 cravado. A regra de fechamento depende de existir uma
+rodada às 20:00.
 
 Deixar `inbox_whatsapp_id` e `inbox_site_id` vazios funciona: sem eles o canal é inferido
 pelo telefone do contato (tem número → WhatsApp). Preencher é mais seguro, porque aí
@@ -322,8 +329,8 @@ conversa fica pela metade, ninguém é avisado, e o lead simplesmente evapora. N
 outros workflows resolve isso, porque todos eles só acordam quando chega uma mensagem — e
 o silêncio, por definição, não dispara webhook nenhum.
 
-`Imobi.IA - Follow-up` é o único workflow com gatilho de **agenda**. A cada 30 minutos ele
-lê as conversas abertas do Chatwoot e decide pelo relógio.
+`Imobi.IA - Follow-up` é o único workflow com gatilho de **agenda**. A cada meia hora ele lê as
+conversas abertas do Chatwoot e decide pelo relógio.
 
 ### A decisão
 
@@ -331,7 +338,7 @@ Tudo gira em torno de duas perguntas: **quem falou por último** e **há quantas
 
 | Quem falou por último | O que acontece |
 |---|---|
-| **Isis** | O lead sumiu no meio da qualificação. É o caso de follow-up: cutuca conforme `etapas_horas` |
+| **Isis** | O lead sumiu no meio da qualificação. É o caso de follow-up: cutuca 3h, 8h e 12h depois |
 | **Lead** | Ele perguntou e ninguém respondeu. Não se manda follow-up para quem está esperando — vira nota privada para o corretor |
 | **Corretor** | Humano no controle. O agente não faz nada, nem mensagem nem alerta |
 
@@ -342,20 +349,56 @@ escrever. Se o corretor respondeu no minuto anterior, o follow-up morre na confe
 
 ### A cadência
 
-`etapas_horas = 3,24,72` significa: 3h depois da pergunta que ficou no ar vem a primeira
-cutucada; 24h depois **dela** vem a segunda; 72h depois da segunda vem a terceira. Depois
-disso, silêncio — o agente não insiste mais.
+`etapas_horas = 3,8,12` são **horas acumuladas desde a mensagem que ficou sem resposta** —
+não intervalos de um follow-up para o outro. Lead parou de responder às 8h da manhã:
 
-O relógio conta sempre da última mensagem, não da primeira. Duas consequências:
+| | Vence | Sai |
+|---|---|---|
+| 1ª cutucada | 8h + 3h | **11:00** |
+| 2ª cutucada | 8h + 8h | **16:00** |
+| 3ª cutucada | 8h + 12h | **20:00** |
 
-- **A resposta do lead zera tudo.** Se ele volta a falar, a sequência anterior é
-  considerada encerrada; se sumir de novo mais tarde, começa outra vez da etapa 1.
-- **Não se acumula atraso.** Um lead parado há uma semana que nunca foi cutucado recebe
-  direto a mensagem da etapa 3, não as três em sequência. Mandar a cutucada de "3h" numa
-  conversa parada há 168h seria fingir que o tempo não passou.
+Depois disso, silêncio — o agente não insiste mais.
+
+O que segura essas horas no lugar é a **âncora**: o instante da mensagem sem resposta,
+gravado em `followups_enviados.ancora_em` pelo primeiro follow-up da sequência e reusado
+pelos seguintes. Se cada etapa contasse a partir da anterior, um follow-up atrasado —
+por horário comercial, por queda do n8n — empurraria todos os outros, e a sequência
+inteira escorregaria para a madrugada.
+
+**A resposta do lead encerra a sequência.** Se ele volta a falar, os follow-ups anteriores
+deixam de contar; se sumir de novo, começa outra cadência, com âncora nova, da etapa 1.
 
 Cada envio é gravado em `followups_enviados`. É essa tabela que impede a mesma etapa de
 sair duas vezes — inclusive se duas rodadas se cruzarem.
+
+### O horário manda na cadência
+
+Nada sai fora de **8h–20h** (a rodada das 20:00 cravadas ainda conta; 20:01 já não).
+Follow-up é mensagem não solicitada: às 3 da manhã ela irrita em vez de recuperar o lead.
+
+Quando uma etapa venceria fora da janela, valem duas regras:
+
+- **Venceria de madrugada → sai às 20:00.** Na rodada do fechamento, o agente olha se a
+  próxima etapa vence antes da abertura do dia seguinte; se vencer, manda ali mesmo, em
+  vez de deixar o lead sem notícia até de manhã. É o que o `*` marca no exemplo abaixo.
+- **As etapas não se amontoam.** Uma etapa atrasada pela janela não faz as seguintes
+  saírem em rodadas consecutivas de 30 min: cada uma respeita também o intervalo que a
+  cadência previa entre ela e a anterior (com `3,8,12`, 5h e depois 4h).
+
+Lead parou às 14:00, e depois às 19:00:
+
+```
+parou 14:00 →  17:00 (1ª)   20:00 (2ª*)   08:00 do dia seguinte (3ª)
+parou 19:00 →  20:00 (1ª*)  08:00 (2ª)    12:00 (3ª)
+```
+
+Sábado à noite com domingo fora dos `dias_semana`, a conta pula o domingo inteiro:
+`Sáb 20:00 (1ª*) → Seg 08:00 (2ª) → Seg 12:00 (3ª)`.
+
+> Na primeira ativação, toda conversa parada dentro de `max_horas_conversa` entra na
+> cadência. Se a caixa tiver histórico acumulado, baixe `max_horas_conversa` (para 48,
+> por exemplo) na primeira rodada para não cutucar um mês de leads de uma vez.
 
 ### O texto
 
@@ -398,8 +441,7 @@ existe para isso.
 
 ### Quando ele não faz nada
 
-- Fora do horário comercial (`horario_inicio`/`horario_fim`/`dias_semana`). Follow-up é
-  mensagem não solicitada: às 3 da manhã ela irrita em vez de recuperar o lead. A rodada
+- Fora do horário comercial (`horario_inicio`/`horario_fim`/`dias_semana`). A rodada
   inteira nem chega a consultar o Chatwoot.
 - Conversa parada há mais de `max_horas_conversa` (padrão 14 dias).
 - Chave de pausa presente no Redis — handoff recente ou corretor respondendo agora.

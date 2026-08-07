@@ -20,7 +20,14 @@ create table if not exists followups_enviados (
   etapa              int  not null default 0,          -- 1..N na cadencia; 0 = alerta interno
   horas_sem_resposta numeric,
   ultima_de          text,                -- lead | isis | corretor (quem falou por ultimo)
-  mensagem           text
+  mensagem           text,
+
+  -- Instante da mensagem que ficou sem resposta. As etapas sao horas contadas
+  -- DAQUI, nao de um follow-up para o outro: com 3,8,12 e o lead parando as
+  -- 08h, as cutucadas caem 11h, 16h e 20h. O primeiro follow-up da sequencia
+  -- grava a ancora e os seguintes reusam ela — sem isso, um follow-up atrasado
+  -- empurraria todos os outros para frente e a sequencia escorregaria.
+  ancora_em          timestamptz
 );
 
 -- A busca do agente e sempre "o que ja fiz nesta conversa, do mais novo pro mais velho".

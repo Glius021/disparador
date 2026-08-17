@@ -40,6 +40,7 @@ memória do Cérebro é de qualificação, não de reengajamento.
 | `Imobi.IA - Cerebro.json` | Agente Isis: prompt, memória, RAG e a tool `encaminhamento` |
 | `Imobi.IA - Encaminhamento CRM.json` | Sub-workflow chamado pela tool `encaminhamento` |
 | `Imobi.IA - Follow-up.json` | Agente de follow-up: lê as conversas e cutuca quem sumiu |
+| `Imobi.IA - Email Marketing.json` | Sequência de 3 emails via Brevo para leads da BDD IMOB |
 | `sql/leads_qualificados.sql` | Tabela dos leads no Supabase |
 | `sql/followups.sql` | Tabela que registra os follow-ups já enviados |
 
@@ -511,3 +512,70 @@ Suba os documentos da imobiliária (regiões atendidas, condições, processo de
 para o Supabase Vector Store, senão a Isis vai responder dúvidas com material do petshop.
 Os nodes `Deleta Conteúdo Documentos` e `Cria Tabela Documentos` no canto do canvas
 ajudam nisso.
+
+## Email Marketing — sequência para quem já entrou em contato
+
+`Imobi.IA - Email Marketing` é separado da Isis: não fala com o lead em tempo real, dispara
+uma sequência de até 3 emails via Brevo para quem está na planilha **BDD IMOB** — a mesma
+base que o fluxo reativo `Brevo.json` (fora deste repo, o que veio anexado) já lê para
+descobrir quem abriu ou clicou um email.
+
+Uma vez por dia (gatilho de agenda, 9h), o workflow:
+
+1. Lê **BDD IMOB**, **Lead Morno** e **Lead Quente** (as mesmas três planilhas do fluxo
+   `Brevo.json`).
+2. Para cada lead da BDD IMOB, decide em `Decide Envio`:
+   - nunca recebeu nada → manda o **email 1**;
+   - recebeu o email 1 há `intervalo_email_2_dias` ou mais → manda o **email 2**;
+   - recebeu o email 2 há `intervalo_email_3_dias` ou mais → manda o **email 3**;
+   - já recebeu os 3 → não insiste mais.
+3. Se o email do lead aparece em **Lead Morno** ou **Lead Quente** — ou seja, ele abriu ou
+   clicou algo — a cadência para ali, mesmo no meio, porque o objetivo (reengajar) já foi
+   cumprido. É a mesma planilha que o fluxo `Brevo.json` alimenta em tempo real quando o
+   lead interage; este workflow só lê o resultado.
+4. Envia via `n8n-nodes-base.sendInBlue` (`sendTemplate`) um por vez, com uma pausa entre
+   cada envio (`intervalo_envio_ms`), e só grava o progresso depois que o Brevo aceitou —
+   se o envio falhar, o lead é tentado de novo na próxima rodada.
+
+O estado da cadência mora na própria BDD IMOB, em três colunas que **você precisa criar**
+antes de ativar (podem ficar vazias, o workflow preenche sozinho):
+
+| Coluna | Uso |
+|---|---|
+| `Email Etapa` | `0`/vazio, `1`, `2`, `3`, `engajado` ou `parou` |
+| `Email Data Envio` | Data/hora ISO do último envio — é dela que os intervalos contam |
+| `Email Descadastrado` | `TRUE` (ou `sim`/`X`) impede qualquer envio futuro para a linha |
+
+### Config Email Marketing
+
+| Campo | O que é |
+|---|---|
+| `template_id_1`/`2`/`3` | ID de cada template no Brevo (crie os 3 lá antes de ativar) |
+| `intervalo_email_2_dias` | Dias após o email 1 para mandar o email 2 (padrão 3) |
+| `intervalo_email_3_dias` | Dias após o email 2 para mandar o email 3 (padrão 7) |
+| `intervalo_envio_ms` | Pausa entre um envio e outro, em ms (padrão 1200) |
+| `limite_envios_por_rodada` | Teto de envios numa única rodada (padrão 200) |
+
+O node `Envia Email` usa a credencial Brevo `agenciaimmerse` (a mesma conta principal do
+fluxo `Brevo.json`) — troque na credencial do node se a sequência precisar sair de outra
+conta.
+
+### Por que a validação de email antes de enviar
+
+A BDD IMOB é uma base cadastral (colunas de CNPJ, sócios, endereço da Receita Federal),
+não uma lista opt-in — muito email desatualizado ou mal formatado. `Decide Envio` descarta
+quem não tem um email com formato minimamente válido, e quem está marcado como
+descadastrado, antes de gerar qualquer chamada ao Brevo. Bounce em excesso é o que
+derruba a reputação de um domínio de envio.
+
+### Antes de ativar
+
+- Crie as 3 colunas na BDD IMOB (`Email Etapa`, `Email Data Envio`, `Email Descadastrado`).
+- Crie os 3 templates no Brevo e cole os IDs no Config.
+- **Rode uma primeira vez com `limite_envios_por_rodada` baixo** (10, por exemplo) e
+  confira no Brevo se os emails saíram e os parâmetros do template (`NOME`, `EMPRESA`)
+  vieram preenchidos, antes de liberar o teto de 200.
+- Este workflow não faz opt-out automático por link de descadastro — hoje o campo
+  `Email Descadastrado` é manual. Se o Brevo processar o descadastro do lado dele
+  (unsubscribe do próprio provedor), tudo bem; se quiser refletir isso na planilha também,
+  é um passo a mais a construir (webhook do Brevo de evento `unsubscribed` → marca a linha).

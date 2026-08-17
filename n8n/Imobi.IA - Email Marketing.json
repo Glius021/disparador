@@ -1,0 +1,682 @@
+{
+  "name": "Imobi.IA - Email Marketing",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -2000,
+        0
+      ],
+      "id": "em-agenda",
+      "name": "Agenda Diária"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c1",
+              "name": "template_id_1",
+              "value": "1",
+              "type": "string"
+            },
+            {
+              "id": "c2",
+              "name": "template_id_2",
+              "value": "2",
+              "type": "string"
+            },
+            {
+              "id": "c3",
+              "name": "template_id_3",
+              "value": "3",
+              "type": "string"
+            },
+            {
+              "id": "c4",
+              "name": "intervalo_email_2_dias",
+              "value": "3",
+              "type": "string"
+            },
+            {
+              "id": "c5",
+              "name": "intervalo_email_3_dias",
+              "value": "7",
+              "type": "string"
+            },
+            {
+              "id": "c6",
+              "name": "intervalo_envio_ms",
+              "value": "1200",
+              "type": "string"
+            },
+            {
+              "id": "c7",
+              "name": "limite_envios_por_rodada",
+              "value": "200",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1800,
+        0
+      ],
+      "id": "em-config",
+      "name": "Config Email Marketing"
+    },
+    {
+      "parameters": {
+        "resource": "sheet",
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1XX2DRlDqOZfYtnb6SKskNQYXM4EBM6_dbe7J-sSMRZA",
+          "cachedResultName": "BDD IMOB"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "id",
+          "value": "2123651261",
+          "cachedResultName": "Planilha1"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -1600,
+        -160
+      ],
+      "id": "em-le-bdd",
+      "name": "Lê BDD IMOB",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DKPtE2uNGBK4cHZ9",
+          "name": "Google Sheets account"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "resource": "sheet",
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1fYVwfa-Q7xQVBbeDPn2hKscYI09NLTrrtidculEK7eE",
+          "cachedResultName": "Lead Morno"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "id",
+          "value": "0",
+          "cachedResultName": "Página1"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -1600,
+        32
+      ],
+      "id": "em-le-morno",
+      "name": "Lê Lead Morno",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DKPtE2uNGBK4cHZ9",
+          "name": "Google Sheets account"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "resource": "sheet",
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1C9ax2rCwe6DrfR145PUDdCm_C8uh6OS99I7IjDbXbG0",
+          "cachedResultName": "Lead Quente"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "id",
+          "value": "0",
+          "cachedResultName": "Página1"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -1600,
+        224
+      ],
+      "id": "em-le-quente",
+      "name": "Lê Lead Quente",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DKPtE2uNGBK4cHZ9",
+          "name": "Google Sheets account"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Une as tres planilhas e decide, por lead, o que fazer nesta rodada:\n//   enviar        -> manda o email da etapa que estiver em aberto (1, 2 ou 3)\n//   marcar_engajado -> o lead abriu/clicou um email (apareceu em Lead Morno ou\n//                      Lead Quente): a cadencia para, sem mandar mais nada\n//   (nada)        -> ainda nao chegou a vez, ja terminou a cadencia, ou o lead\n//                      nao tem email valido / esta descadastrado\n//\n// A cadencia usa 3 colunas gravadas na propria BDD IMOB por este workflow:\n//   \"Email Etapa\"          0 (nunca enviado) | 1 | 2 | 3 | \"engajado\" | \"parou\"\n//   \"Email Data Envio\"     data/hora do ultimo envio (ISO)\n//   \"Email Descadastrado\"  TRUE quando o lead pediu para nao receber mais\nconst cfg = $('Config Email Marketing').first().json;\n\nconst num = (v, padrao) => { const n = Number(v); return Number.isFinite(n) ? n : padrao; };\nconst int2 = num(cfg.intervalo_email_2_dias, 3);\nconst int3 = num(cfg.intervalo_email_3_dias, 7);\n\n// Emails que ja abriram ou clicaram algum email — a cadencia para para eles,\n// porque o objetivo do disparo (reengajar) ja foi cumprido.\nconst normEmail = (e) => String(e || '').trim().toUpperCase();\nconst engajados = new Set();\nfor (const nome of ['Lê Lead Morno', 'Lê Lead Quente']) {\n  for (const item of $(nome).all()) {\n    const e = normEmail(item.json.Email);\n    if (e) engajados.add(e);\n  }\n}\n\n// Filtro basico de email obviamente invalido. A BDD IMOB e uma base\n// cadastral (Receita Federal), nao uma lista opt-in: muito email desatualizado\n// ou mal formatado gera bounce, e bounce em excesso queima o dominio no Brevo.\nconst EMAIL_OK = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]{2,}$/;\n\nconst diasDesde = (iso) => {\n  const d = new Date(iso);\n  if (isNaN(d.getTime())) return Infinity;\n  return (Date.now() - d.getTime()) / 86400000;\n};\n\nconst saida = [];\nfor (const item of $('Lê BDD IMOB').all()) {\n  const row = item.json;\n  const emailBruto = String(row['CORREIO ELETRONICO'] || '').trim();\n  const emailNorm = normEmail(emailBruto);\n  if (!emailBruto || !EMAIL_OK.test(emailBruto)) continue;\n\n  const descadastrado = String(row['Email Descadastrado'] || '').trim().toUpperCase();\n  if (descadastrado === 'TRUE' || descadastrado === 'SIM' || descadastrado === 'X') continue;\n\n  const etapaAtual = String(row['Email Etapa'] || '0').trim();\n\n  const base = {\n    Cnpj: row.CNPJ,\n    email: emailBruto,\n    nome: String(row['NOME FANTASIA'] || row['RAZAO SOCIAL'] || '').trim(),\n    empresa: String(row['RAZAO SOCIAL'] || row['NOME FANTASIA'] || '').trim(),\n  };\n\n  // Engajou: marca e para, mesmo que ja estivesse marcado (idempotente) —\n  // exceto se ja estava \"engajado\" ou \"parou\", ai nao ha nada novo a gravar.\n  if (engajados.has(emailNorm)) {\n    if (etapaAtual !== 'engajado' && etapaAtual !== 'parou') {\n      saida.push({ json: { ...base, acao: 'marcar_engajado', etapa_nova: 'engajado' } });\n    }\n    continue;\n  }\n\n  if (etapaAtual === 'engajado' || etapaAtual === 'parou') continue;\n\n  const etapaNum = Number(etapaAtual) || 0;\n  const ultimoEnvio = row['Email Data Envio'];\n\n  if (etapaNum === 0) {\n    saida.push({ json: { ...base, acao: 'enviar', etapa_nova: 1, template_id: cfg.template_id_1 } });\n  } else if (etapaNum === 1) {\n    if (diasDesde(ultimoEnvio) >= int2) {\n      saida.push({ json: { ...base, acao: 'enviar', etapa_nova: 2, template_id: cfg.template_id_2 } });\n    }\n  } else if (etapaNum === 2) {\n    if (diasDesde(ultimoEnvio) >= int3) {\n      saida.push({ json: { ...base, acao: 'enviar', etapa_nova: 3, template_id: cfg.template_id_3 } });\n    }\n  }\n  // etapaNum >= 3: cadencia completa, nao insiste mais.\n}\n\nconst limite = num(cfg.limite_envios_por_rodada, 200);\nconst envios = saida.filter((i) => i.json.acao === 'enviar').slice(0, limite);\nconst outros = saida.filter((i) => i.json.acao !== 'enviar');\nreturn [...envios, ...outros];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1200,
+        0
+      ],
+      "id": "em-decide",
+      "name": "Decide Envio"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "a1",
+                    "leftValue": "={{ $json.acao }}",
+                    "rightValue": "enviar",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "enviar"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "a2",
+                    "leftValue": "={{ $json.acao }}",
+                    "rightValue": "marcar_engajado",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "marcar_engajado"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "nada"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        -1000,
+        0
+      ],
+      "id": "em-switch",
+      "name": "Precisa Agir?"
+    },
+    {
+      "parameters": {
+        "resource": "sheet",
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1XX2DRlDqOZfYtnb6SKskNQYXM4EBM6_dbe7J-sSMRZA",
+          "cachedResultName": "BDD IMOB"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "id",
+          "value": "2123651261",
+          "cachedResultName": "Planilha1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "CNPJ": "={{ $json.Cnpj }}",
+            "Email Etapa": "={{ $json.etapa_nova }}"
+          },
+          "matchingColumns": [
+            "CNPJ"
+          ],
+          "schema": [
+            {
+              "id": "CNPJ",
+              "displayName": "CNPJ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email Etapa",
+              "displayName": "Email Etapa",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -800,
+        160
+      ],
+      "id": "em-marca-engajado",
+      "name": "Marca Engajado",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DKPtE2uNGBK4cHZ9",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {
+          "reset": false
+        }
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -800,
+        -80
+      ],
+      "id": "em-loop",
+      "name": "Loop Envios"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -600,
+        -240
+      ],
+      "id": "em-fim",
+      "name": "Fim da Rodada"
+    },
+    {
+      "parameters": {
+        "resource": "email",
+        "operation": "sendTemplate",
+        "templateId": "={{ $json.template_id }}",
+        "receipients": "={{ $json.email }}",
+        "additionalFields": {
+          "templateParameters": {
+            "parameterValues": {
+              "parameters": "={{ 'NOME=' + ($json.nome || 'Olá').replace(/,/g,' ') + ',EMPRESA=' + ($json.empresa || '').replace(/,/g,' ') }}"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.sendInBlue",
+      "typeVersion": 1,
+      "position": [
+        -600,
+        -80
+      ],
+      "id": "em-envia",
+      "name": "Envia Email",
+      "credentials": {
+        "sendInBlueApi": {
+          "id": "EWS5dStEu5wpclQk",
+          "name": "agenciaimmerse"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "unit": "seconds",
+        "amount": "={{ Number($('Config Email Marketing').first().json.intervalo_envio_ms) / 1000 }}"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -400,
+        -80
+      ],
+      "id": "em-espera",
+      "name": "Espera Entre Envios"
+    },
+    {
+      "parameters": {
+        "resource": "sheet",
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1XX2DRlDqOZfYtnb6SKskNQYXM4EBM6_dbe7J-sSMRZA",
+          "cachedResultName": "BDD IMOB"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "id",
+          "value": "2123651261",
+          "cachedResultName": "Planilha1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "CNPJ": "={{ $('Envia Email').item.json.Cnpj || $json.Cnpj }}",
+            "Email Etapa": "={{ $('Envia Email').item.json.etapa_nova || $json.etapa_nova }}",
+            "Email Data Envio": "={{ $now.toISO() }}"
+          },
+          "matchingColumns": [
+            "CNPJ"
+          ],
+          "schema": [
+            {
+              "id": "CNPJ",
+              "displayName": "CNPJ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email Etapa",
+              "displayName": "Email Etapa",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Email Data Envio",
+              "displayName": "Email Data Envio",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -200,
+        -80
+      ],
+      "id": "em-registra",
+      "name": "Registra Envio",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DKPtE2uNGBK4cHZ9",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "content": "## Email Marketing — leads que já entraram em contato\n\nUma vez por dia, lê a **BDD IMOB** e decide, por lead, qual email da sequência mandar (1, 2 ou 3), com base em duas colunas gravadas nela mesma: `Email Etapa` e `Email Data Envio`.\n\nCruza com **Lead Morno** e **Lead Quente** — as mesmas planilhas que o fluxo `Brevo.json` alimenta quando alguém abre ou clica. Quem já engajou sai da cadência: não faz sentido cutucar quem já respondeu.\n\nAntes de ativar: adicione em BDD IMOB as colunas `Email Etapa`, `Email Data Envio` e `Email Descadastrado` (pode deixar vazias — o fluxo preenche sozinho). Crie os 3 templates no Brevo e cole os IDs no **Config Email Marketing**.",
+        "height": 400,
+        "width": 420,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2020,
+        -480
+      ],
+      "id": "em-sticky-1",
+      "name": "Nota Fluxo"
+    },
+    {
+      "parameters": {
+        "content": "## A cadência\n\n`Email Etapa = 0` (ou vazio) → manda o **email 1**.\n\n`intervalo_email_2_dias` depois do email 1 → manda o **email 2**, contando de `Email Data Envio`.\n\n`intervalo_email_3_dias` depois do email 2 → manda o **email 3**.\n\nDepois do 3, para — não insiste mais.\n\nSe o lead abrir ou clicar em **qualquer** momento (aparece em Lead Morno/Lead Quente), `Email Etapa` vira `engajado` e a sequência inteira para ali, mesmo que faltassem etapas.",
+        "height": 320,
+        "width": 380,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1200,
+        -560
+      ],
+      "id": "em-sticky-2",
+      "name": "Nota Cadência"
+    },
+    {
+      "parameters": {
+        "content": "## Por que o loop manda um por vez\n\nA `Envia Email` é a chamada real à API do Brevo — errar aqui queima envios de verdade.\n\nO `Loop Envios` processa um lead por vez e `Espera Entre Envios` espaça as chamadas (`intervalo_envio_ms`, padrão 1,2s), para não estourar o limite de requisições do Brevo numa rodada com centenas de leads.\n\n`Registra Envio` só grava depois que o Brevo aceitou o envio — se o Brevo falhar, a etapa não avança e o lead é tentado de novo na próxima rodada.",
+        "height": 300,
+        "width": 380,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -600,
+        320
+      ],
+      "id": "em-sticky-3",
+      "name": "Nota Envio"
+    }
+  ],
+  "connections": {
+    "Agenda Diária": {
+      "main": [
+        [
+          {
+            "node": "Config Email Marketing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config Email Marketing": {
+      "main": [
+        [
+          {
+            "node": "Lê BDD IMOB",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Lê Lead Morno",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Lê Lead Quente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lê BDD IMOB": {
+      "main": [
+        [
+          {
+            "node": "Decide Envio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lê Lead Morno": {
+      "main": [
+        [
+          {
+            "node": "Decide Envio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lê Lead Quente": {
+      "main": [
+        [
+          {
+            "node": "Decide Envio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Decide Envio": {
+      "main": [
+        [
+          {
+            "node": "Precisa Agir?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Precisa Agir?": {
+      "main": [
+        [
+          {
+            "node": "Loop Envios",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Marca Engajado",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Marca Engajado": {
+      "main": [
+        []
+      ]
+    },
+    "Loop Envios": {
+      "main": [
+        [
+          {
+            "node": "Fim da Rodada",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Envia Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Envia Email": {
+      "main": [
+        [
+          {
+            "node": "Espera Entre Envios",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Espera Entre Envios": {
+      "main": [
+        [
+          {
+            "node": "Registra Envio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registra Envio": {
+      "main": [
+        [
+          {
+            "node": "Loop Envios",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}

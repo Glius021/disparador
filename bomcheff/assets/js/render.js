@@ -183,7 +183,7 @@ function renderHero() {
   $('#heroStage').replaceChildren(mediaSlot(
     D.seo.ogImage,
     'Pizza a metro da Pizzaria Bom Cheff servida na caixa alongada',
-    { eager: true, className: 'slot--art', fallback: () => metroPizza({ seed: 7, w: 1600, h: 300 }) },
+    { eager: true, className: 'slot--art', fallback: () => metroPizza({ seed: 7, w: 1600, h: 240, slices: 12 }) },
   ));
 
   const sep = () => el('span', { class: 'sep', 'aria-hidden': 'true', text: '/' });

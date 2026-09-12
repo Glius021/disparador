@@ -4,6 +4,7 @@
  * então atualizar o site é editar um arquivo só.
  */
 import { BOM_CHEFF as D } from './data.js';
+import { metroPizza, flavorMark } from './artwork.js';
 
 /* --- utilitários -------------------------------------------------------- */
 const $  = (s, r = document) => r.querySelector(s);
@@ -33,41 +34,62 @@ function el(tag, props = {}, ...kids) {
   return n;
 }
 
+/* Modo edição: abra o site com ?fotos na URL para ver, sobre cada espaço,
+   o nome do arquivo que deve ser salvo ali. Fora dele o visitante nunca vê
+   aviso de "foto pendente" — vê a arte da casa. */
+const EDIT = new URLSearchParams(location.search).has('fotos');
+
+/** Painel de textura: fundo tratado para os espaços que ainda não têm foto. */
+function texturePanel() {
+  return el('div', { class: 'tex', 'aria-hidden': 'true' }, el('span', { class: 'tex__mark' }));
+}
+
 /**
- * Slot de imagem tolerante a falhas.
- * Desenha primeiro a moldura tratada, tenta carregar o arquivo real em
- * segundo plano e só troca quando ele existe. Resultado: nunca há ícone de
- * imagem quebrada, nem salto de layout, nem seção vazia.
+ * Painel de citação: em vez de um retângulo esperando fotografia, o espaço
+ * carrega uma avaliação real do Google. Quando o arquivo da foto existir,
+ * a imagem entra por cima e a citação se recolhe.
  */
-function mediaSlot(src, alt, { eager = false, className = '' } = {}) {
-  const file = src ? src.split('/').pop() : 'arquivo ainda não definido';
-  const ph = el('div', { class: `ph ${className}`.trim(), role: 'img', 'aria-label': alt || 'Foto em breve' },
-    el('span', { class: 'ph__label' },
-      el('b', { text: 'Foto em breve' }),
-      el('span', { class: 'ph__file', text: file }),
-    ),
+function quotePanel(text) {
+  return el('blockquote', { class: 'tex tex--quote' },
+    el('span', { class: 'tex__mark' }),
+    el('p', { text: `“${text}”` }),
+    el('cite', { text: 'Avaliação no Google' }),
   );
-  if (!src) return ph;
+}
+
+/**
+ * Espaço de imagem tolerante a falhas.
+ *
+ * Desenha primeiro o conteúdo de reserva (ilustração ou textura), tenta
+ * carregar a foto real em segundo plano e só troca quando o arquivo existe.
+ * Nunca há ícone de imagem quebrada, nem salto de layout, nem seção vazia —
+ * e o site fica apresentável antes de a pizzaria mandar uma única foto.
+ */
+function mediaSlot(src, alt, { eager = false, className = '', fallback = texturePanel } = {}) {
+  const holder = el('div', { class: `slot ${className}`.trim() }, fallback());
+  if (EDIT) {
+    holder.append(el('span', { class: 'slot__hint' }, src ? src.split('/').pop() : 'arquivo não definido'));
+  }
+  if (!src) return holder;
 
   const probe = new Image();
   probe.decoding = 'async';
   probe.addEventListener('load', () => {
     const img = el('img', {
-      src, alt: alt || '', class: className,
+      src, alt: alt || '', class: 'slot__img',
       decoding: 'async',
       loading: eager ? 'eager' : 'lazy',
       fetchpriority: eager ? 'high' : null,
       width: probe.naturalWidth, height: probe.naturalHeight,
     });
-    // Herda classes adicionadas em tempo de execução para o estado não se perder na troca.
-    img.classList.add(...[...ph.classList].filter(c => c !== 'ph'));
     img.style.opacity = '0';
     img.style.transition = 'opacity .6s cubic-bezier(.33,1,.68,1)';
-    ph.replaceWith(img);
+    holder.prepend(img);
+    holder.classList.add('slot--photo');
     requestAnimationFrame(() => { img.style.opacity = ''; });
   }, { once: true });
   probe.src = src;
-  return ph;
+  return holder;
 }
 
 const arrow = () => el('svg', {
@@ -81,9 +103,14 @@ const arrow = () => el('svg', {
 const star = () => el('svg', { viewBox: '0 0 20 19', fill: 'currentColor', 'aria-hidden': 'true' },
   el('path', { d: 'M10 0l2.6 6.3 6.8.5-5.2 4.4 1.6 6.6L10 14.3 4.2 17.8l1.6-6.6L.6 6.8l6.8-.5L10 0z' }));
 
-function btn(label, href, { ghost = false, extra = {} } = {}) {
+/* `short` permite um rótulo curto no celular sem duplicar o botão nem
+   depender de JavaScript de redimensionamento — quem troca é o CSS. */
+function btn(label, href, { ghost = false, short = null, extra = {} } = {}) {
   const cls = `btn${ghost ? ' btn--ghost' : ''}`;
-  return el('a', { class: cls, href, 'data-cursor': 'hot', ...extra }, el('span', { text: label }), arrow());
+  const text = short
+    ? [el('span', { class: 'lbl lbl--full', text: label }), el('span', { class: 'lbl lbl--short', text: short })]
+    : [el('span', { text: label })];
+  return el('a', { class: cls, href, 'aria-label': label, 'data-cursor': 'hot', ...extra }, text, arrow());
 }
 
 const nf1 = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
@@ -149,14 +176,14 @@ function renderHero() {
   $('#heroActions').replaceChildren(
     btn('Ver o cardápio', '#cardapio'),
     wa
-      ? btn('Chamar no WhatsApp', wa, { ghost: true, extra: { target: '_blank', rel: 'noopener' } })
-      : btn(D.contact.phone, D.contact.phoneHref, { ghost: true }),
+      ? btn('Chamar no WhatsApp', wa, { ghost: true, short: 'WhatsApp', extra: { target: '_blank', rel: 'noopener' } })
+      : btn(D.contact.phone, D.contact.phoneHref, { ghost: true, short: 'Ligar' }),
   );
 
   $('#heroStage').replaceChildren(mediaSlot(
     D.seo.ogImage,
     'Pizza a metro da Pizzaria Bom Cheff servida na caixa alongada',
-    { eager: true },
+    { eager: true, className: 'slot--art', fallback: () => metroPizza({ seed: 7, w: 1600, h: 300 }) },
   ));
 
   const sep = () => el('span', { class: 'sep', 'aria-hidden': 'true', text: '/' });
@@ -206,6 +233,7 @@ function renderMetro() {
   $('#metroMedia').prepend(mediaSlot(
     'assets/img/hero/pizza-a-metro-mesa.webp',
     'Pizza a metro inteira sobre a mesa',
+    { className: 'slot--art', fallback: () => metroPizza({ seed: 23, w: 1600, h: 340, slices: 12 }) },
   ));
 
   /* Especificações só aparecem se forem preenchidas com dado confirmado. */
@@ -232,7 +260,10 @@ function renderMenu() {
     D.menu.items.forEach(item => {
       // Casca estável: a foto pode ser trocada por dentro sem perder o estado.
       const shot = el('div', { class: 'menu__shot' },
-        mediaSlot(item.image, `${item.name} — Pizzaria Bom Cheff`));
+        mediaSlot(item.image, `${item.name} — Pizzaria Bom Cheff`, {
+          className: 'slot--art',
+          fallback: () => flavorMark(item.name, { sweet: item.cat === 'doces' }),
+        }));
       frames.set(item.id, shot);
       frame.append(shot);
     });
@@ -309,7 +340,9 @@ function renderSweet() {
   const items = D.menu.items.filter(i => i.cat === 'doces');
   $('#sweetGrid').replaceChildren(...items.map((item, i) =>
     el('article', { class: 'sweet__card', 'data-reveal': '', style: `--d:${i}` },
-      el('div', { class: 'sweet__media' }, mediaSlot(item.image, `${item.name} — Pizzaria Bom Cheff`)),
+      el('div', { class: 'sweet__media' }, mediaSlot(item.image, `${item.name} — Pizzaria Bom Cheff`, {
+        className: 'slot--art', fallback: () => flavorMark(item.name, { sweet: true }),
+      })),
       el('div', {},
         el('span', { class: 'sweet__idx', text: `D${String(i + 1).padStart(2, '0')}` }),
         el('h3', { class: 'sweet__name', text: item.name }),
@@ -320,11 +353,26 @@ function renderSweet() {
 
 /* --- 7. GALERIA --------------------------------------------------------- */
 function renderGallery() {
-  $('#galleryGrid').replaceChildren(...D.gallery.map((g, i) =>
+  /* Enquanto não há fotografia, duas peças bem compostas valem mais do que
+     uma grade de cinco espaços vazios. `gallery` traz cinco entradas: as
+     outras três entram sozinhas assim que os arquivos existirem. */
+  const items = D.gallery.slice(0, EDIT ? D.gallery.length : 2);
+  const quotes = D.reviewHighlights;
+  $('#galleryGrid').replaceChildren(...items.map((g, i) =>
     el('figure', {
       class: `gallery__item${g.span ? ` gallery__item--${g.span}` : ''}`,
       'data-reveal': '', style: `--d:${i}`, 'data-parallax': '0.06',
-    }, mediaSlot(g.src, g.alt))));
+    }, mediaSlot(g.src, g.alt, {
+      fallback: quotes[i] ? () => quotePanel(quotes[i]) : texturePanel,
+    }))));
+
+  $('#casaFacts').replaceChildren(...[
+    ['Onde', `${D.location.street}, ${D.location.city}`],
+    ['A partir de', `${D.hours.opensAt.replace(':00', 'h')}`],
+    ['Tamanhos', `${D.metro.sizeFrom} a ${D.metro.sizeTo}`],
+    ['Por pessoa', `${D.priceRange.display}`],
+  ].map(([k, v]) => el('div', { class: 'place__fact' },
+    el('dt', { text: k }), el('dd', { text: v }))));
 }
 
 /* --- 8. PROVA SOCIAL ---------------------------------------------------- */
@@ -334,9 +382,6 @@ function renderProof() {
   $('#proofStars').replaceChildren(...Array.from({ length: D.rating.scale }, star));
   $('#proofStars').setAttribute('aria-label', `${nf1.format(D.rating.value).replace('.', ',')} de ${D.rating.scale} estrelas`);
   $('#proofCount').textContent = `${nf0.format(D.rating.count)} avaliações no Google`;
-
-  $('#proofPills').replaceChildren(...D.reviewHighlights.map((t, i) =>
-    el('li', { class: 'proof__pill', text: t, 'data-reveal': '', style: `--d:${i}` })));
 
   const shown = D.reviews.filter(r => r.published);
   $('#proofReviews').replaceChildren(...shown.map((r, i) =>

@@ -1,9 +1,17 @@
 # Fotos do site — onde colocar cada arquivo
 
-O site foi construído para **nunca quebrar por falta de imagem**. Enquanto um
-arquivo não existe, aquele espaço exibe uma moldura tratada com o nome do
-arquivo esperado. Assim que você salvar o arquivo com o nome certo nesta pasta,
-ele aparece sozinho — **sem editar HTML, CSS ou JavaScript**.
+O site foi construído para **nunca depender de foto para ficar pronto**.
+
+Enquanto um arquivo não existe, aquele espaço exibe arte vetorial autoral
+(a pizza a metro desenhada, a marca redonda de cada sabor) ou uma avaliação
+real do Google — nunca um retângulo vazio e nunca uma foto de banco de imagem.
+Assim que você salvar o arquivo com o nome certo nesta pasta, a foto entra por
+cima e a arte se recolhe sozinha — **sem editar HTML, CSS ou JavaScript**.
+
+> **Modo edição:** abra o site com `?fotos` no fim do endereço
+> (ex.: `.../index.html?fotos`) para ver, marcado sobre cada espaço, o nome do
+> arquivo que deve ser salvo ali — e para exibir os cinco espaços da galeria em
+> vez dos dois que aparecem por padrão. O visitante comum nunca vê esses avisos.
 
 ## Como preparar as fotos
 

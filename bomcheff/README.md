@@ -11,6 +11,7 @@ bomcheff/
 │   ├── css/style.css       sistema visual completo
 │   ├── js/
 │   │   ├── data.js         ← TODO O CONTEÚDO DO SITE MORA AQUI
+│   │   ├── artwork.js      ilustrações vetoriais geradas por código
 │   │   ├── render.js       monta a página a partir do data.js
 │   │   ├── motion.js       movimento ligado ao scroll
 │   │   └── main.js         inicialização
@@ -43,8 +44,12 @@ correspondente simplesmente não aparece, em vez de exibir informação inventad
 ## Fotos
 
 Veja **`assets/img/README.md`** — lista o nome exato de cada arquivo.
-Enquanto uma foto não existe, o site mostra uma moldura tratada no lugar (nunca
-uma imagem quebrada). Salvou o arquivo com o nome certo, ele aparece sozinho.
+
+O site não espera por elas para ficar apresentável: onde ainda não há foto,
+entra ilustração autoral (`artwork.js`) ou uma avaliação real do Google.
+Salvou o arquivo com o nome certo, a foto entra por cima e a arte se recolhe.
+Abra com `?fotos` no endereço para ver o nome do arquivo esperado em cada
+espaço.
 
 ## Rodar localmente
 
@@ -73,6 +78,11 @@ Netlify, Cloudflare Pages). Basta apontar a raiz do site para a pasta
 
 - **Sem framework.** O conteúdo é pequeno e estável; evitar build mantém o
   carregamento rápido e a manutenção acessível a quem não é desenvolvedor.
+- **Ilustração no lugar de foto genérica.** Sem fotografia da casa, encher o
+  site com banco de imagem — ou com foto de comida gerada por IA — venderia um
+  produto que não é o da pizzaria. A saída foi desenhar: `artwork.js` gera a
+  pizza a metro e a marca de cada sabor em traço de gravura, a partir de uma
+  semente fixa, então cada sabor tem a sua e nenhuma se repete.
 - **Um único `requestAnimationFrame`** cuida de todo o movimento ligado ao
   scroll. Os efeitos usam apenas `transform` e `opacity`, então não há reflow
   nem deslocamento de layout.

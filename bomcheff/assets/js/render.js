@@ -113,6 +113,11 @@ function btn(label, href, { ghost = false, short = null, extra = {} } = {}) {
   return el('a', { class: cls, href, 'aria-label': label, 'data-cursor': 'hot', ...extra }, text, arrow());
 }
 
+/* replaceChildren converte null/false em NÓS DE TEXTO ("null", "false"):
+   um filho condicional passado direto vira lixo visível na tela. */
+const fill = (node, ...kids) =>
+  node.replaceChildren(...kids.flat().filter(k => k !== null && k !== undefined && k !== false));
+
 const nf1 = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 const nf0 = new Intl.NumberFormat('pt-BR');
 
@@ -152,7 +157,7 @@ function renderNav() {
     el('li', { class: 'navmenu__item', style: `--i:${k}` },
       el('a', { class: 'navmenu__link', href: i.href, text: i.label }))));
 
-  $('#navMenuFoot').replaceChildren(
+  fill($('#navMenuFoot'),
     D.contact.phone && el('a', { href: D.contact.phoneHref, text: D.contact.phone }),
     waHref() && el('a', { href: waHref(), target: '_blank', rel: 'noopener', text: 'WhatsApp' }),
     el('a', { href: D.location.mapsUrl, target: '_blank', rel: 'noopener', text: `${D.location.street} — ${D.location.city}/${D.location.state}` }),
@@ -430,7 +435,7 @@ function renderPlace() {
         : v),
     )));
 
-  $('#placeActions').replaceChildren(
+  fill($('#placeActions'),
     btn('Como chegar', L.directionsUrl, { extra: { target: '_blank', rel: 'noopener' } }),
     waHref()
       ? btn('WhatsApp', waHref(), { ghost: true, extra: { target: '_blank', rel: 'noopener' } })
@@ -438,13 +443,26 @@ function renderPlace() {
     D.contact.menuUrl ? btn('Cardápio completo', D.contact.menuUrl, { ghost: true, extra: { target: '_blank', rel: 'noopener' } }) : null,
   );
 
-  /* Mapa carregado sob demanda: nenhum iframe do Google pesa no first load. */
+  /* Mapa carregado sob demanda: nenhum iframe do Google pesa no primeiro
+     carregamento. Por baixo dele fica sempre um cartão com o endereço e o
+     Plus Code — se o iframe for bloqueado (bloqueador de anúncios, extensão
+     de privacidade, política de conteúdo restritiva), o visitante continua
+     enxergando como chegar em vez de um retângulo cinza. */
   const map = $('#placeMap');
   const q = encodeURIComponent(`${L.street}, ${L.city} - ${L.state}, ${L.postalCode}`);
+  map.replaceChildren(
+    el('div', { class: 'place__mapcard' },
+      el('span', { class: 'tex__mark' }),
+      el('p', { class: 'place__mapaddr' }, L.street, el('br'), `${L.city} — ${L.state}`),
+      el('p', { class: 'place__mapcode', text: L.plusCode }),
+      el('a', { class: 'place__maplink', href: L.mapsUrl, target: '_blank', rel: 'noopener', 'data-cursor': 'hot' },
+        'Abrir no Google Maps'),
+    ),
+  );
   const io = new IntersectionObserver(entries => {
     if (!entries.some(e => e.isIntersecting)) return;
     io.disconnect();
-    map.replaceChildren(el('iframe', {
+    map.append(el('iframe', {
       title: `Mapa: ${D.brand.legalName}`, loading: 'lazy',
       referrerpolicy: 'no-referrer-when-downgrade',
       src: `https://www.google.com/maps?q=${q}&z=17&output=embed`,

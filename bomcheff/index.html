@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pizzaria Bom Cheff | São João Nepomuceno - MG</title>
+<meta name="description" content="Pizzaria em São João Nepomuceno (MG) com pizzas de 4 fatias até 1 metro de comprimento. Sabores salgados e doces, atendimento no salão, retirada e entrega.">
+<meta name="theme-color" content="#0A0807">
+<meta name="robots" content="index, follow">
+<meta name="author" content="Pizzaria Bom Cheff">
+<meta name="geo.region" content="BR-MG">
+<meta name="geo.placename" content="São João Nepomuceno">
+<meta name="geo.position" content="-21.5350944;-43.0104001">
+
+<meta property="og:type" content="restaurant.restaurant">
+<meta property="og:locale" content="pt_BR">
+<meta property="og:site_name" content="Pizzaria Bom Cheff">
+<meta property="og:title" content="Pizzaria Bom Cheff | São João Nepomuceno - MG">
+<meta property="og:description" content="De 4 fatias a 1 metro de comprimento. Pizzas salgadas e doces em São João Nepomuceno, MG.">
+<meta property="og:image" content="assets/img/hero/pizza-a-metro.webp">
+<meta name="twitter:card" content="summary_large_image">
+
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="favicon.svg">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400&family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,400..700,0..40,1;1,9..144,400..700,0..40,1&family=Inter+Tight:ital,wght@0,400..600;1,400&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400&family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,400..700,0..40,1;1,9..144,400..700,0..40,1&family=Inter+Tight:ital,wght@0,400..600;1,400&display=swap">
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+
+<body>
+<a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
+<div class="grain" aria-hidden="true"></div>
+<div class="cursor" id="cursor" aria-hidden="true"><span class="cursor__ring"></span></div>
+
+<!-- ====================== NAVEGAÇÃO ====================== -->
+<header class="nav" id="nav">
+  <div class="shell nav__inner">
+    <a class="nav__brand" id="navBrand" href="#inicio"></a>
+    <nav aria-label="Navegação principal">
+      <ul class="nav__links" id="navLinks"></ul>
+    </nav>
+    <div class="nav__cta" id="navCta"></div>
+    <button class="nav__burger" id="navBurger" type="button"
+            aria-expanded="false" aria-controls="navMenu" aria-label="Abrir menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</header>
+
+<div class="navmenu" id="navMenu" aria-hidden="true">
+  <nav aria-label="Navegação mobile">
+    <ul class="navmenu__list" id="navMenuList"></ul>
+  </nav>
+  <div class="navmenu__foot" id="navMenuFoot"></div>
+</div>
+
+<main id="conteudo">
+
+  <!-- ====================== HERO ====================== -->
+  <section class="hero" id="inicio">
+    <div class="hero__glow" aria-hidden="true"></div>
+
+    <div class="shell hero__inner">
+      <div class="hero__head">
+        <p class="eyebrow">São João Nepomuceno &middot; Minas Gerais</p>
+        <h1 class="display hero__title">
+          <span class="ln"><span>Um <em class="hero__accent">metro</em></span></span>
+          <span class="ln"><span>de pura</span></span>
+          <span class="ln"><span>delícia.</span></span>
+        </h1>
+      </div>
+
+      <div class="hero__aside">
+        <figure class="hero__quote" id="heroQuote"></figure>
+        <div class="hero__actions" id="heroActions"></div>
+      </div>
+    </div>
+
+    <div class="hero__stage">
+      <div class="stage">
+        <div class="stage__media" id="heroStage"></div>
+      </div>
+      <div class="shell">
+        <div class="ruler" aria-hidden="true">
+          <div class="ruler__labels"></div>
+          <div class="ruler__ticks"></div>
+          <div class="ruler__base"></div>
+        </div>
+        <p class="hero__meta" id="heroMeta"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====================== FAIXA CORRIDA ====================== -->
+  <div class="marquee">
+    <div class="marquee__track" id="marqueeTrack"></div>
+  </div>
+
+  <!-- ====================== A ASSINATURA: 1 METRO ====================== -->
+  <section class="metro section--rule" id="a-metro" aria-labelledby="metroTitle">
+    <div class="metro__track" id="metroTrack">
+      <div class="metro__pin">
+        <div class="metro__bg" aria-hidden="true"></div>
+
+        <div class="shell metro__inner">
+          <header class="section__head" data-reveal>
+            <p class="eyebrow">A assinatura da casa</p>
+            <h2 class="h2" id="metroTitle" data-split>Uma pizza para dividir. Ou tentar não dividir.</h2>
+          </header>
+
+          <div class="metro__stage">
+            <p class="metro__num" aria-hidden="true">
+              <span class="metro__numwrap"><em id="metroNum">0</em><span class="metro__unit">cm</span></span>
+            </p>
+
+            <div class="metro__media" id="metroMedia">
+              <span class="metro__beam" aria-hidden="true"></span>
+            </div>
+
+            <div class="ruler" aria-hidden="true">
+              <div class="ruler__labels"></div>
+              <div class="ruler__ticks"></div>
+              <div class="ruler__fill" id="metroFill"></div>
+              <div class="ruler__base"></div>
+            </div>
+          </div>
+
+          <div class="metro__steps" id="metroSteps"></div>
+          <dl class="place__facts" id="metroSpecs"></dl>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====================== CARDÁPIO ====================== -->
+  <section class="section section--rule" id="cardapio" aria-labelledby="cardapioTitle">
+    <div class="shell">
+      <header class="section__head" data-reveal>
+        <p class="eyebrow">Cardápio</p>
+        <h2 class="h2" id="cardapioTitle" data-split>Os sabores que fazem a fila de sábado.</h2>
+        <p class="lead" id="menuKicker"></p>
+      </header>
+
+      <div class="menu__bar" id="menuTabs" role="tablist" aria-label="Categorias do cardápio"></div>
+
+      <div class="menu__layout">
+        <div class="menu__list" id="menuList" role="tabpanel" aria-label="Sabores"></div>
+
+        <aside class="menu__showcase" aria-hidden="true">
+          <div class="menu__frame" id="menuFrame"></div>
+          <p class="menu__caption">
+            <span id="menuCapName"></span><b id="menuCapCat"></b>
+          </p>
+        </aside>
+      </div>
+
+      <p class="lead" style="margin-top:2rem;font-size:.9rem">
+        Destaques do cardápio publicados na ficha da pizzaria no Google.
+        Para preços, tamanhos e sabores do dia, fale com a casa.
+      </p>
+    </div>
+  </section>
+
+  <!-- ====================== DOCES ====================== -->
+  <section class="section sweet" id="doces" aria-labelledby="docesTitle">
+    <div class="shell">
+      <header class="section__head" data-reveal>
+        <p class="eyebrow">Depois da salgada</p>
+        <h2 class="h2" id="docesTitle" data-split>A parte da noite que ninguém recusa.</h2>
+        <p class="lead">Banana com canela, brigadeiro, paçoca, Ovo Maltine, açaí, chocolate. Tem quem venha só por isso.</p>
+      </header>
+      <div class="sweet__grid" id="sweetGrid"></div>
+    </div>
+  </section>
+
+  <!-- ====================== AMBIENTE ====================== -->
+  <section class="section section--rule" id="ambiente" aria-labelledby="ambienteTitle">
+    <div class="shell">
+      <header class="section__head" data-reveal>
+        <p class="eyebrow">O salão</p>
+        <h2 class="h2" id="ambienteTitle" data-split>Mesa posta, forno quente, Coliseu na parede.</h2>
+      </header>
+      <div class="gallery__grid" id="galleryGrid"></div>
+    </div>
+  </section>
+
+  <!-- ====================== PROVA SOCIAL ====================== -->
+  <section class="section section--rule" id="avaliacoes" aria-labelledby="avaliacoesTitle">
+    <div class="shell">
+      <header class="section__head" data-reveal>
+        <p class="eyebrow">O que dizem</p>
+        <h2 class="h2" id="avaliacoesTitle" data-split>Cento e dezenove pessoas já opinaram.</h2>
+      </header>
+
+      <div class="proof__score" data-reveal>
+        <p class="proof__value" id="proofValue">0,0</p>
+        <div class="proof__side">
+          <div class="proof__stars" id="proofStars" role="img"></div>
+          <p class="proof__count" id="proofCount"></p>
+        </div>
+      </div>
+
+      <ul class="proof__pills" id="proofPills"></ul>
+      <div class="proof__reviews" id="proofReviews"></div>
+      <div class="transparency" id="transparency" data-reveal></div>
+      <p class="proof__count" id="proofSource" style="margin-top:1.5rem"></p>
+    </div>
+  </section>
+
+  <!-- ====================== VISITAR ====================== -->
+  <section class="section section--rule" id="visitar" aria-labelledby="visitarTitle">
+    <div class="shell">
+      <header class="section__head" data-reveal>
+        <p class="eyebrow">Como chegar</p>
+        <h2 class="h2" id="visitarTitle" data-split>No centro, com estacionamento na rua.</h2>
+      </header>
+
+      <div class="place__grid">
+        <div data-reveal>
+          <p class="place__address" id="placeAddress"></p>
+          <ul class="place__services" id="placeServices" style="margin-top:1.5rem"></ul>
+          <dl class="place__facts" id="placeFacts"></dl>
+          <div class="hero__actions" id="placeActions"></div>
+        </div>
+        <div class="place__map" id="placeMap" data-reveal="clip"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====================== CTA FINAL ====================== -->
+  <section class="section cta" aria-labelledby="ctaTitle">
+    <div class="shell cta__inner">
+      <p class="eyebrow eyebrow--center">Hoje à noite</p>
+      <h2 class="display cta__title" id="ctaTitle" data-split>Um metro cabe na sua mesa?</h2>
+      <div class="cta__actions" id="ctaActions"></div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ====================== RODAPÉ ====================== -->
+<footer class="footer">
+  <div class="shell">
+    <div class="footer__top">
+      <p class="footer__brand" id="footerBrand"></p>
+      <div class="footer__cols" id="footerCols"></div>
+    </div>
+    <div class="footer__bottom">
+      <span>&copy; <span id="footerYear"></span> Pizzaria Bom Cheff</span>
+      <span>São João Nepomuceno &middot; Minas Gerais</span>
+    </div>
+  </div>
+</footer>
+
+<script type="module" src="assets/js/main.js"></script>
+<noscript>
+  <p style="padding:6rem 1.5rem;text-align:center">
+    Este site precisa de JavaScript para exibir o cardápio.
+    Ligue para <a href="tel:+5532999058395">+55 32 99905-8395</a> ou visite
+    R. Dr. Gouvea, 246 — São João Nepomuceno, MG.
+  </p>
+</noscript>
+</body>
+</html>

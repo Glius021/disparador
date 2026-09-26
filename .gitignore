@@ -3,6 +3,7 @@ node_modules/
 
 # Build output
 .output/
+.vercel/
 dist/
 .wrangler/
 

@@ -1,0 +1,232 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Immerse — dark premium. Grafite profundo, tipografia clara,
+ * acentos violeta → ciano. Cores em oklch; nunca hardcode em componentes.
+ */
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-glow-violet: var(--glow-violet);
+  --color-glow-cyan: var(--glow-cyan);
+  --color-glow-faint: var(--glow-faint);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-surface: var(--surface);
+  --color-surface-strong: var(--surface-strong);
+  --color-surface-soft: var(--surface-soft);
+  --color-surface-lift: var(--surface-lift);
+
+  --font-display: "Instrument Serif", Georgia, serif;
+  --font-sans: "Inter Tight", system-ui, sans-serif;
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+:root {
+  --radius: 0.375rem;
+
+  --background: oklch(0.145 0.005 280);
+  --foreground: oklch(0.96 0 0);
+  --card: oklch(0.18 0.006 280);
+  --card-foreground: oklch(0.96 0 0);
+  --popover: oklch(0.18 0.006 280);
+  --popover-foreground: oklch(0.96 0 0);
+  --primary: oklch(0.96 0 0);
+  --primary-foreground: oklch(0.145 0 0);
+  --secondary: oklch(0.22 0.006 280);
+  --secondary-foreground: oklch(0.96 0 0);
+  --muted: oklch(0.22 0.006 280);
+  --muted-foreground: oklch(0.62 0.005 280);
+  --accent: oklch(0.26 0.01 280);
+  --accent-foreground: oklch(0.96 0 0);
+  --destructive: oklch(0.6 0.19 25);
+  --destructive-foreground: oklch(0.98 0 0);
+  --border: oklch(1 0 0 / 0.08);
+  --input: oklch(1 0 0 / 0.14);
+  --ring: oklch(0.82 0.13 205);
+
+  /* Acentos de brilho (violeta → ciano) */
+  --glow-violet: oklch(0.62 0.21 295);
+  --glow-cyan: oklch(0.82 0.13 205);
+  --glow-faint: oklch(0.62 0.21 295 / 0.14);
+  --line: oklch(1 0 0 / 0.07);
+  --line-strong: oklch(1 0 0 / 0.16);
+  --surface: oklch(0.18 0.006 280);
+  --surface-strong: oklch(0.215 0.007 280);
+  --surface-soft: oklch(0.16 0.005 280);
+  --surface-lift: oklch(0.245 0.008 280);
+}
+
+/* Tema único por design; seletor mantido por compatibilidade com shadcn/ui. */
+.dark {
+  --background: oklch(0.145 0.005 280);
+  --foreground: oklch(0.96 0 0);
+  --card: oklch(0.18 0.006 280);
+  --card-foreground: oklch(0.96 0 0);
+  --popover: oklch(0.18 0.006 280);
+  --popover-foreground: oklch(0.96 0 0);
+  --primary: oklch(0.96 0 0);
+  --primary-foreground: oklch(0.145 0 0);
+  --secondary: oklch(0.22 0.006 280);
+  --secondary-foreground: oklch(0.96 0 0);
+  --muted: oklch(0.22 0.006 280);
+  --muted-foreground: oklch(0.62 0.005 280);
+  --accent: oklch(0.26 0.01 280);
+  --accent-foreground: oklch(0.96 0 0);
+  --destructive: oklch(0.6 0.19 25);
+  --destructive-foreground: oklch(0.98 0 0);
+  --border: oklch(1 0 0 / 0.08);
+  --input: oklch(1 0 0 / 0.14);
+  --ring: oklch(0.82 0.13 205);
+}
+
+@layer base {
+  *,
+  ::before,
+  ::after {
+    border-color: var(--color-border);
+  }
+
+  html {
+    color-scheme: dark;
+    overflow-x: clip;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: clip;
+  }
+
+  ::selection {
+    background: oklch(0.62 0.21 295 / 0.35);
+    color: oklch(0.98 0 0);
+  }
+
+  :focus-visible {
+    outline: 2px solid oklch(0.82 0.13 205 / 0.6);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--color-background);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: oklch(1 0 0 / 0.14);
+    border-radius: 999px;
+    border: 2px solid var(--color-background);
+  }
+}
+
+@utility display {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: -0.015em;
+  line-height: 1.02;
+}
+
+@utility eyebrow {
+  font-size: 0.6875rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+@utility rule-line {
+  height: 1px;
+  width: 100%;
+  background: var(--color-line);
+}
+
+@utility text-gradient {
+  background-image: linear-gradient(100deg, var(--glow-violet), var(--glow-cyan));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@utility spotlight-card {
+  position: relative;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  transition:
+    border-color 0.5s var(--ease-out-expo),
+    background 0.5s var(--ease-out-expo),
+    transform 0.5s var(--ease-out-expo);
+}
+
+@utility spotlight-card-hover {
+  &:hover {
+    border-color: var(--color-line-strong);
+    background: var(--color-surface-strong);
+    transform: translateY(-2px);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .reveal {
+    animation: reveal-up 0.9s var(--ease-out-expo) both;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes reveal-up {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}

@@ -57,7 +57,10 @@ function doPost(e) {
 // Deixe vazio ("") até você implantar o script acima.
 // Exemplo do formato esperado:
 //   https://script.google.com/macros/s/AKfycbxxxxxxxxXXXXXXXXXXXX/exec
-const APPS_SCRIPT_URL = "";
+// Dica: você também pode definir a variável de ambiente VITE-ignored "APPS_SCRIPT_URL"
+// no painel de hospedagem em vez de editar este arquivo (mais seguro para tokens).
+const APPS_SCRIPT_URL =
+  (typeof process !== "undefined" && process.env?.APPS_SCRIPT_URL) || "";
 
 export type LeadPayload = {
   nome: string;
